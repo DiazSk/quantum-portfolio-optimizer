@@ -1,0 +1,19 @@
+# Essentials only
+__pycache__/
+*.py[cod]
+.env
+venv/
+data/*.csv
+data/*.parquet
+*.log
+.DS_Store
+.idea/
+.vscode/
+*.ipynb_checkpoints
+models/*.pkl
+models/*.joblib
+cache/
+logs/
+*.h5
+api_keys.json
+credentials/
