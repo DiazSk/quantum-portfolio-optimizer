@@ -1,0 +1,50 @@
+{
+  "AAPL": {
+    "predicted_return": 0.02102805714499284,
+    "confidence": 0.9380053735052454
+  },
+  "MSFT": {
+    "predicted_return": 0.011824261966816066,
+    "confidence": 0.8053039307448
+  },
+  "GOOGL": {
+    "predicted_return": 0.02013739345320622,
+    "confidence": 0.7215676644901265
+  },
+  "AMZN": {
+    "predicted_return": 0.00889470662566341,
+    "confidence": 0.8188076273647279
+  },
+  "NVDA": {
+    "predicted_return": 0.02558752940405995,
+    "confidence": 0.739294734375994
+  },
+  "JPM": {
+    "predicted_return": 0.02437713292419664,
+    "confidence": 0.7661570710543822
+  },
+  "GS": {
+    "predicted_return": 0.004436182757190137,
+    "confidence": 0.7886157899476396
+  },
+  "BAC": {
+    "predicted_return": -0.001890185153335007,
+    "confidence": 0.7874054183195558
+  },
+  "JNJ": {
+    "predicted_return": -0.005742431686654648,
+    "confidence": 0.8221036427070235
+  },
+  "PFE": {
+    "predicted_return": 0.023020667807677996,
+    "confidence": 0.699414803138607
+  },
+  "XOM": {
+    "predicted_return": 0.020919460853490154,
+    "confidence": 0.8789330398069466
+  },
+  "CVX": {
+    "predicted_return": 0.009380775109969956,
+    "confidence": 0.8098822455901546
+  }
+}
