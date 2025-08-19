@@ -42,8 +42,8 @@ class AlternativeDataCollector:
             # Reddit API
             self.reddit = praw.Reddit(
                 client_id=os.getenv('REDDIT_CLIENT_ID', 'mock'),
-                client_secret=os.getenv('REDDIT_SECRET', 'mock'),
-                user_agent='PortfolioOptimizer/1.0'
+                client_secret=os.getenv('REDDIT_CLIENT_SECRET', 'mock'),
+                user_agent=os.getenv('REDDIT_USER_AGENT', 'PortfolioOptimizer/1.0')
             )
             
             # News API
