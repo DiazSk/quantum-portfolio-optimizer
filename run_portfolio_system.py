@@ -109,7 +109,11 @@ def run_complete_pipeline():
     detected_regime = np.random.choice(regimes)
     regime_confidence = np.random.uniform(0.7, 0.95)
     
-    print(f"  Detected Regime: {detected_regime.upper()}")
+    if detected_regime and isinstance(detected_regime, str):
+        print(f"  Detected Regime: {detected_regime.upper()}")
+    else:
+        detected_regime = "neutral"
+        print(f"  Detected Regime: NEUTRAL (default)")
     print(f"  Confidence: {regime_confidence:.1%}")
     
     # ========== STEP 4: Save Results ==========
