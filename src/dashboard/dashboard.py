@@ -212,7 +212,7 @@ def generate_portfolio_pdf(portfolio_weights, risk_metrics, backtest_data=None, 
         story.append(Paragraph(date_text, styles['Normal']))
         
         # NEW: Add market regime information
-        if market_regime:
+        if market_regime and isinstance(market_regime, str) and market_regime.strip():
             regime_style = ParagraphStyle(
                 'MarketRegime',
                 parent=styles['Normal'],
@@ -451,7 +451,7 @@ def generate_portfolio_excel(portfolio_weights, risk_metrics, backtest_data=None
                     market_data = []
                     
                     # Add market regime
-                    if market_regime:
+                    if market_regime and isinstance(market_regime, str) and market_regime.strip():
                         market_data.append(['Market Regime', market_regime.upper()])
                         market_data.append(['Analysis Date', datetime.now().strftime('%Y-%m-%d %H:%M')])
                         market_data.append([])  # Empty row
@@ -877,13 +877,16 @@ with tab1:
                 # Show market regime if available
                 if 'market_regime' in st.session_state:
                     regime = st.session_state['market_regime']
-                    regime_emoji = {
-                        'bullish': '🐂',
-                        'bearish': '🐻',
-                        'neutral': '⚖️',
-                        'high_volatility': '⚠️'
-                    }.get(regime.lower(), '📊')
-                    st.info(f"{regime_emoji} Market: {regime.upper()}")
+                    if regime is not None:
+                        regime_emoji = {
+                            'bullish': '🐂',
+                            'bearish': '🐻',
+                            'neutral': '⚖️',
+                            'high_volatility': '⚠️'
+                        }.get(regime.lower(), '📊')
+                        st.info(f"{regime_emoji} Market: {regime.upper()}")
+                    else:
+                        st.info("📊 Market: Regime analysis pending")
                 
                 # Debug info: Show optimization method used
                 if 'last_optimization_method' in st.session_state:
@@ -1330,7 +1333,17 @@ with tab5:
                 market_regime = st.session_state.get('market_regime', 'Unknown')
                 ml_predictions = st.session_state.get('ml_predictions', {})
                 
-                if not portfolio_weights:
+                # FIX: Properly check if portfolio_weights is empty
+                has_weights = False
+                if portfolio_weights is not None:
+                    if isinstance(portfolio_weights, pd.Series):
+                        has_weights = not portfolio_weights.empty
+                    elif isinstance(portfolio_weights, dict):
+                        has_weights = len(portfolio_weights) > 0
+                    else:
+                        has_weights = bool(portfolio_weights)
+                
+                if not has_weights:
                     # Create sample portfolio if no data available
                     portfolio_weights = {
                         'AAPL': 0.25,
@@ -1373,7 +1386,17 @@ with tab5:
                 market_regime = st.session_state.get('market_regime', 'Unknown')
                 ml_predictions = st.session_state.get('ml_predictions', {})
                 
-                if not portfolio_weights:
+                # FIX: Properly check if portfolio_weights is empty
+                has_weights = False
+                if portfolio_weights is not None:
+                    if isinstance(portfolio_weights, pd.Series):
+                        has_weights = not portfolio_weights.empty
+                    elif isinstance(portfolio_weights, dict):
+                        has_weights = len(portfolio_weights) > 0
+                    else:
+                        has_weights = bool(portfolio_weights)
+                
+                if not has_weights:
                     # Create sample portfolio if no data available
                     portfolio_weights = {
                         'AAPL': 0.25,
