@@ -3,6 +3,8 @@ pandas
 numpy
 scipy
 scikit-learn
+matplotlib
+seaborn
 
 # ML - Already installed  
 xgboost
