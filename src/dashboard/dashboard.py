@@ -123,8 +123,7 @@ with tab1:
                         # Initialize the portfolio optimizer
                         optimizer = PortfolioOptimizer(
                             tickers=selected_tickers,
-                            risk_tolerance=risk_free_rate,  # Use as proxy for risk tolerance
-                            optimization_method=optimization_method.lower().replace(' ', '_')
+                            lookback_years=2  # Use 2 years of historical data
                         )
                         
                         # Get alternative data if available
@@ -145,11 +144,25 @@ with tab1:
                         status_text.text("⚖️ Optimizing portfolio...")
                         progress_bar.progress(70)
                         
-                        # Perform optimization
-                        weights, performance_metrics = optimizer.optimize_portfolio(
-                            alternative_data=alt_data_scores,
-                            use_ml=use_ml
-                        )
+                        # Perform optimization using the run() method
+                        optimization_result = optimizer.run()
+                        
+                        if optimization_result is not None:
+                            # Extract weights and convert to pandas Series
+                            weights = pd.Series(
+                                optimization_result['weights'], 
+                                index=optimization_result['tickers']
+                            )
+                            
+                            # Extract performance metrics
+                            performance_metrics = {
+                                'expected_return': optimization_result['metrics']['return'],
+                                'sharpe_ratio': optimization_result['metrics']['sharpe'],
+                                'volatility': optimization_result['metrics']['volatility'],
+                                'max_drawdown': optimization_result['metrics']['max_drawdown']
+                            }
+                        else:
+                            raise Exception("Optimization returned no results")
                         
                         progress_bar.progress(100)
                         status_text.text("✅ Optimization complete!")
