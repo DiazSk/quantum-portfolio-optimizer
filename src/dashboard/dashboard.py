@@ -392,6 +392,9 @@ with tab3:
     required_keys = ['ALPHA_VANTAGE_API_KEY', 'REDDIT_CLIENT_ID', 'NEWS_API_KEY']
     available_keys = [key for key in required_keys if os.getenv(key)]
     
+    # Initialize fetch_alt_data to avoid NameError
+    fetch_alt_data = False
+    
     if len(available_keys) < 2:
         st.warning("⚠️ Alternative data requires at least 2 API keys. Please configure your .env file.")
         st.info("Available APIs: Alpha Vantage ✅, Reddit ✅, News API ✅")
@@ -409,8 +412,8 @@ with tab3:
                     if time_diff.total_seconds() < 3600:  # 1 hour cache
                         st.info(f"📋 Using cached data ({int(time_diff.total_seconds()/60)} min old)")
         
-        # Fetch or use cached data
-        if fetch_alt_data or 'alt_data_cache' not in st.session_state:
+        # Fetch or use cached data (only if we have APIs and tickers)
+        if len(available_keys) >= 2 and selected_tickers and (fetch_alt_data or 'alt_data_cache' not in st.session_state):
             with st.spinner("🔄 Collecting real alternative data..."):
                 try:
                     # Limit to 5 tickers for performance
