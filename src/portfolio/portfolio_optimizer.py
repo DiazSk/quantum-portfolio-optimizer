@@ -15,11 +15,13 @@ import warnings
 warnings.filterwarnings('ignore')
 
 class PortfolioOptimizer:
-    """Portfolio optimizer - fully debugged version"""
+    """Portfolio optimizer with dynamic ML predictions"""
     
-    def __init__(self, tickers, lookback_years=2):
+    def __init__(self, tickers, lookback_years=2, risk_tolerance=5, optimization_method="Maximum Sharpe Ratio"):
         self.tickers = tickers
         self.lookback_years = lookback_years
+        self.risk_tolerance = risk_tolerance
+        self.optimization_method = optimization_method
         self.prices = None
         self.returns = None
         self.ml_models = {}
@@ -125,14 +127,30 @@ class PortfolioOptimizer:
         
         for ticker in self.prices.columns:
             try:
-                # Create simple features
+                # Create basic features (simplified to avoid errors)
                 features = pd.DataFrame(index=self.prices.index)
                 
-                # Basic features
+                # Basic features that are safe
                 features['returns_5d'] = self.returns[ticker].rolling(5).mean()
                 features['returns_20d'] = self.returns[ticker].rolling(20).mean()
                 features['volatility'] = self.returns[ticker].rolling(20).std()
-                features['rsi'] = self.calculate_rsi(self.prices[ticker])
+                
+                # Safe RSI calculation
+                try:
+                    features['rsi'] = self.calculate_rsi(self.prices[ticker])
+                except:
+                    features['rsi'] = 50  # Default neutral RSI
+                
+                # Add simple risk-based features
+                if self.risk_tolerance >= 7:
+                    # Aggressive: Short-term momentum
+                    features['momentum'] = self.returns[ticker].rolling(3).mean()
+                elif self.risk_tolerance <= 4:
+                    # Conservative: Longer-term stability
+                    features['long_trend'] = self.returns[ticker].rolling(60).mean()
+                else:
+                    # Moderate: Balanced
+                    features['medium_trend'] = self.returns[ticker].rolling(15).mean()
                 
                 # Target
                 target = self.returns[ticker].shift(-1)
@@ -142,34 +160,64 @@ class PortfolioOptimizer:
                 X = features[valid_mask].values
                 y = target[valid_mask].values
                 
-                if len(X) > 50:
-                    # Train simple model
+                if len(X) > 50 and len(y) > 50:
+                    # Use safer random state generation
+                    try:
+                        import time
+                        base_seed = hash(str(self.risk_tolerance)) % 1000
+                        time_component = int(time.time() * 1000) % 100
+                        dynamic_seed = (base_seed + time_component) % 2**31  # Ensure positive 32-bit int
+                    except:
+                        dynamic_seed = 42 + self.risk_tolerance  # Fallback
+                    
+                    # Train model with safer parameters
                     model = xgb.XGBRegressor(
-                        n_estimators=30,
-                        max_depth=3,
-                        random_state=42,
+                        n_estimators=min(50, 30 + (self.risk_tolerance * 2)),
+                        max_depth=min(6, 3 + (self.risk_tolerance // 3)),
+                        random_state=dynamic_seed,
+                        learning_rate=min(0.3, 0.1 + (self.risk_tolerance * 0.01)),
                         verbosity=0
                     )
                     
-                    # Train on most data, test on last 20%
+                    # Train on most data
                     split = int(len(X) * 0.8)
-                    model.fit(X[:split], y[:split])
-                    
-                    # Make prediction
-                    if len(features.dropna()) > 0:
+                    if split > 10:  # Ensure we have enough training data
+                        model.fit(X[:split], y[:split])
+                        
+                        # Make prediction
                         last_features = features.dropna().iloc[-1:].values
-                        pred = model.predict(last_features)[0]
-                        predictions[ticker] = pred
-                        print(f"  {ticker}: Predicted return = {pred:+.3%}")
+                        if len(last_features) > 0 and last_features.shape[1] == X.shape[1]:
+                            base_pred = model.predict(last_features)[0]
+                            
+                            # Apply strategy-based adjustments
+                            if self.optimization_method == "Maximum Return":
+                                risk_multiplier = 1 + (self.risk_tolerance - 5) * 0.1
+                                adjusted_pred = base_pred * risk_multiplier
+                            elif self.optimization_method == "Minimum Volatility":
+                                risk_multiplier = max(0.5, 1 - (self.risk_tolerance - 5) * 0.05)
+                                adjusted_pred = base_pred * risk_multiplier
+                            else:  # Maximum Sharpe Ratio or others
+                                risk_multiplier = 1 + (self.risk_tolerance - 5) * 0.05
+                                adjusted_pred = base_pred * risk_multiplier
+                            
+                            predictions[ticker] = adjusted_pred
+                            print(f"  {ticker}: Predicted return = {adjusted_pred:+.3%} (risk={self.risk_tolerance}, method={self.optimization_method})")
+                        else:
+                            predictions[ticker] = self.returns[ticker].mean()
+                            print(f"  {ticker}: Using historical mean (feature mismatch)")
                     else:
                         predictions[ticker] = self.returns[ticker].mean()
+                        print(f"  {ticker}: Using historical mean (insufficient data)")
                 else:
                     predictions[ticker] = self.returns[ticker].mean()
-                    print(f"  {ticker}: Using historical mean")
+                    print(f"  {ticker}: Using historical mean (not enough samples)")
                     
             except Exception as e:
-                print(f"  {ticker}: Error - using zero")
-                predictions[ticker] = 0.0
+                print(f"  {ticker}: Error - {str(e)[:50]}, using historical mean")
+                try:
+                    predictions[ticker] = self.returns[ticker].mean()
+                except:
+                    predictions[ticker] = 0.0
                 
         return predictions
     
