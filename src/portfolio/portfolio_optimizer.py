@@ -26,6 +26,8 @@ class PortfolioOptimizer:
         self.returns = None
         self.ml_models = {}
         self.use_random_state = use_random_state  # Control randomness
+        self.market_regime = None
+        self.ml_predictions = {}
 
     def detect_market_regime(self, returns):
         """Detect current market regime for adaptive predictions"""
@@ -141,7 +143,11 @@ class PortfolioOptimizer:
         
         # DETECT MARKET REGIME HERE
         market_regime = self.detect_market_regime(self.returns.mean(axis=1))
-        print(f"   📊 Market Regime Detected: {market_regime.upper()}")
+        if market_regime and isinstance(market_regime, str):
+            print(f"   📊 Market Regime Detected: {market_regime.upper()}")
+        else:
+            market_regime = "neutral"
+            print(f"   📊 Market Regime Detected: NEUTRAL (default)")
         
         predictions = {}
         
