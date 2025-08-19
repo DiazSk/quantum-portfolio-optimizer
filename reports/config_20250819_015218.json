@@ -1,0 +1,20 @@
+{
+  "tickers": [
+    "AAPL",
+    "GOOGL",
+    "MSFT",
+    "NVDA",
+    "AMZN",
+    "JPM",
+    "XOM",
+    "JNJ"
+  ],
+  "initial_capital": 100000,
+  "optimization_method": "Maximum Sharpe Ratio",
+  "use_ml": true,
+  "use_alternative_data": true,
+  "lookback_period": 252,
+  "rebalance_freq": "Daily",
+  "transaction_cost": 0.001,
+  "timestamp": "2025-08-19T01:52:18.957739"
+}
