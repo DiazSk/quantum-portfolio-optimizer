@@ -1,0 +1,99 @@
+{
+  "timestamp": "2025-08-19T00:31:31.802410",
+  "configuration": {
+    "tickers": [
+      "AAPL",
+      "MSFT",
+      "GOOGL",
+      "NVDA",
+      "AMZN",
+      "META",
+      "JPM",
+      "JNJ"
+    ],
+    "initial_capital": 100000,
+    "lookback_period": "2 years",
+    "rebalance_frequency": "monthly"
+  },
+  "optimization_results": {
+    "sharpe_ratio": 1.7347460015431628,
+    "expected_return": 0.5440812522305011,
+    "volatility": 0.3136374153602357,
+    "weights": {
+      "AAPL": 0.0,
+      "AMZN": 0.07366656874169916,
+      "GOOGL": 0.0,
+      "JNJ": 0.3048693139486017,
+      "JPM": 0.0,
+      "META": 0.0,
+      "MSFT": 0.0,
+      "NVDA": 0.6214641173096991
+    }
+  },
+  "backtest_results": {
+    "total_return": 1.3357396553348122,
+    "annual_return": 0.4591024866001941,
+    "sharpe_ratio": 1.6952859268079576,
+    "max_drawdown": -0.18771140363192496,
+    "win_rate": 0.5671342685370742
+  },
+  "alternative_data": [
+    {
+      "ticker": "AAPL",
+      "alt_data_score": 0.3957723020927977,
+      "alt_data_confidence": 0.2974893201163036,
+      "timestamp": "2025-08-19T00:31:18.668507"
+    },
+    {
+      "ticker": "MSFT",
+      "alt_data_score": 0.5796115847208179,
+      "alt_data_confidence": 0.13866032725273836,
+      "timestamp": "2025-08-19T00:31:19.805849"
+    },
+    {
+      "ticker": "GOOGL",
+      "alt_data_score": 0.38274107090027853,
+      "alt_data_confidence": 0.18601381006969267,
+      "timestamp": "2025-08-19T00:31:21.126562"
+    },
+    {
+      "ticker": "NVDA",
+      "alt_data_score": 0.6072944186925603,
+      "alt_data_confidence": 1.0,
+      "timestamp": "2025-08-19T00:31:21.187586"
+    },
+    {
+      "ticker": "AMZN",
+      "alt_data_score": 0.40513908941205534,
+      "alt_data_confidence": 0.21751167804828545,
+      "timestamp": "2025-08-19T00:31:22.865561"
+    },
+    {
+      "ticker": "META",
+      "alt_data_score": 0.5006038333705204,
+      "alt_data_confidence": 0.09164301481168366,
+      "timestamp": "2025-08-19T00:31:24.510785"
+    },
+    {
+      "ticker": "JPM",
+      "alt_data_score": 0.5205075176999252,
+      "alt_data_confidence": 0.04133170340537508,
+      "timestamp": "2025-08-19T00:31:24.510803"
+    },
+    {
+      "ticker": "JNJ",
+      "alt_data_score": 0.35882051384064206,
+      "alt_data_confidence": 0.04328259641367253,
+      "timestamp": "2025-08-19T00:31:25.360373"
+    }
+  ],
+  "risk_metrics": {
+    "Portfolio VaR (95%)": "-3.08%",
+    "Expected Shortfall": "-4.62%",
+    "Maximum Drawdown": "-18.77%",
+    "Volatility": "24.72%",
+    "Downside Deviation": "17.31%",
+    "Beta vs Market": "0.85",
+    "Tracking Error": "3.2%"
+  }
+}

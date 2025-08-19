@@ -1,0 +1,13 @@
+{
+  "total_return": NaN,
+  "annual_return": 0.0,
+  "sharpe_ratio": 0,
+  "max_drawdown": 0.0,
+  "volatility": 0.0,
+  "win_rate": 0.0,
+  "calmar_ratio": 0,
+  "sortino_ratio": 0,
+  "start_date": "2021-01-01",
+  "end_date": "2023-12-31",
+  "generated_at": "2025-08-18T22:29:40.028039"
+}
