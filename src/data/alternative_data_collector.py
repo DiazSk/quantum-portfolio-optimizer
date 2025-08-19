@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
-import praw
+import asyncpraw
 import tweepy
 from newsapi import NewsApiClient
 from pytrends.request import TrendReq
@@ -39,12 +39,12 @@ class AlternativeDataCollector:
     def _init_apis(self):
         """Initialize API connections with fallback to mock data"""
         try:
-            # Reddit API
-            self.reddit = praw.Reddit(
-                client_id=os.getenv('REDDIT_CLIENT_ID', 'mock'),
-                client_secret=os.getenv('REDDIT_CLIENT_SECRET', 'mock'),
-                user_agent=os.getenv('REDDIT_USER_AGENT', 'PortfolioOptimizer/1.0')
-            )
+            # Reddit API (will be initialized async)
+            self.reddit_credentials = {
+                'client_id': os.getenv('REDDIT_CLIENT_ID', 'mock'),
+                'client_secret': os.getenv('REDDIT_CLIENT_SECRET', 'mock'),
+                'user_agent': os.getenv('REDDIT_USER_AGENT', 'PortfolioOptimizer/1.0')
+            }
             
             # News API
             self.newsapi = NewsApiClient(
@@ -62,23 +62,30 @@ class AlternativeDataCollector:
         sentiments = []
         
         try:
-            subreddits = ['wallstreetbets', 'stocks', 'investing']
-            
-            for subreddit_name in subreddits:
-                subreddit = self.reddit.subreddit(subreddit_name)
+            # Initialize async Reddit instance
+            async with asyncpraw.Reddit(
+                client_id=self.reddit_credentials['client_id'],
+                client_secret=self.reddit_credentials['client_secret'],
+                user_agent=self.reddit_credentials['user_agent']
+            ) as reddit:
                 
-                # Search for ticker mentions
-                for submission in subreddit.search(ticker, limit=limit//3):
-                    # Analyze title sentiment
-                    blob = TextBlob(submission.title)
-                    sentiments.append({
-                        'source': f'reddit_{subreddit_name}',
-                        'timestamp': datetime.fromtimestamp(submission.created_utc),
-                        'sentiment': blob.sentiment.polarity,
-                        'subjectivity': blob.sentiment.subjectivity,
-                        'score': submission.score,
-                        'num_comments': submission.num_comments
-                    })
+                subreddits = ['wallstreetbets', 'stocks', 'investing']
+                
+                for subreddit_name in subreddits:
+                    subreddit = await reddit.subreddit(subreddit_name)
+                    
+                    # Search for ticker mentions
+                    async for submission in subreddit.search(ticker, limit=limit//3):
+                        # Analyze title sentiment
+                        blob = TextBlob(submission.title)
+                        sentiments.append({
+                            'source': f'reddit_{subreddit_name}',
+                            'timestamp': datetime.fromtimestamp(submission.created_utc),
+                            'sentiment': blob.sentiment.polarity,
+                            'subjectivity': blob.sentiment.subjectivity,
+                            'score': submission.score,
+                            'num_comments': submission.num_comments
+                        })
                     
         except Exception as e:
             logger.info(f"Using mock Reddit data for {ticker}: {e}")
