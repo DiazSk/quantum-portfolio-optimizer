@@ -276,19 +276,49 @@ class AlternativeDataCollector:
         
         return pd.DataFrame(all_data)
     
-    def calculate_alternative_data_score(self, df: pd.DataFrame) -> pd.Series:
+    def calculate_alternative_data_score(self, df: pd.DataFrame) -> pd.DataFrame:
         """Calculate composite alternative data score for each ticker"""
         
-        # Normalize all features to 0-1 scale
-        features = [col for col in df.columns if col not in ['ticker', 'timestamp']]
+        # Create a copy to avoid modifying original
+        df = df.copy()
         
+        # Convert satellite data fields to numeric if they exist
+        satellite_cols = [col for col in df.columns if 'satellite_' in col]
+        for col in satellite_cols:
+            if col in df.columns:
+                # Handle the 'data_type' column which contains strings
+                if 'data_type' in col:
+                    # Map data types to numeric scores
+                    data_type_scores = {
+                        'parking_occupancy': 0.8,
+                        'shipping_activity': 0.7,
+                        'generic_activity': 0.5
+                    }
+                    if col in df.columns:
+                        df[col + '_score'] = df[col].map(data_type_scores).fillna(0.5)
+                else:
+                    # Convert other satellite columns to numeric
+                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+        
+        # Get numeric features only
+        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        features = [col for col in numeric_cols if col not in ['ticker', 'timestamp']]
+        
+        # Normalize numeric features to 0-1 scale
         for feature in features:
-            if df[feature].std() > 0:
-                df[f'{feature}_norm'] = (df[feature] - df[feature].min()) / (df[feature].max() - df[feature].min())
-            else:
-                df[f'{feature}_norm'] = 0.5
+            if feature in df.columns:
+                col_std = df[feature].std()
+                if col_std > 0:
+                    col_min = df[feature].min()
+                    col_max = df[feature].max()
+                    if col_max > col_min:
+                        df[f'{feature}_norm'] = (df[feature] - col_min) / (col_max - col_min)
+                    else:
+                        df[f'{feature}_norm'] = 0.5
+                else:
+                    df[f'{feature}_norm'] = 0.5
         
-        # Weighted combination
+        # Calculate weighted combination with error handling
         weights = {
             'sentiment': 0.3,
             'momentum': 0.25,
@@ -296,14 +326,49 @@ class AlternativeDataCollector:
             'satellite': 0.2
         }
         
-        df['alt_data_score'] = (
-            weights['sentiment'] * (df['reddit_sentiment_score_norm'] * 0.5 + df['news_sentiment_score_norm'] * 0.5) +
-            weights['momentum'] * (df['reddit_sentiment_momentum_norm'] * 0.5 + df['news_sentiment_momentum_norm'] * 0.5) +
-            weights['trends'] * df['google_trend_score_norm'] +
-            weights['satellite'] * 0.5  # Simplified for satellite
-        )
+        # Initialize score with default value
+        df['alt_data_score'] = 0.5
         
-        return df[['ticker', 'alt_data_score', 'timestamp']]
+        # Safely calculate each component
+        score_components = []
+        
+        # Sentiment component
+        if 'reddit_sentiment_score_norm' in df.columns and 'news_sentiment_score_norm' in df.columns:
+            sentiment_score = weights['sentiment'] * (
+                df['reddit_sentiment_score_norm'] * 0.5 + 
+                df['news_sentiment_score_norm'] * 0.5
+            )
+            score_components.append(sentiment_score)
+        
+        # Momentum component
+        if 'reddit_sentiment_momentum_norm' in df.columns and 'news_sentiment_momentum_norm' in df.columns:
+            momentum_score = weights['momentum'] * (
+                df['reddit_sentiment_momentum_norm'] * 0.5 + 
+                df['news_sentiment_momentum_norm'] * 0.5
+            )
+            score_components.append(momentum_score)
+        
+        # Trends component
+        if 'google_trend_score_norm' in df.columns:
+            trends_score = weights['trends'] * df['google_trend_score_norm']
+            score_components.append(trends_score)
+        
+        # Satellite component (use any available satellite metric)
+        satellite_norm_cols = [col for col in df.columns if 'satellite_' in col and '_norm' in col]
+        if satellite_norm_cols:
+            # Average all normalized satellite metrics
+            satellite_avg = df[satellite_norm_cols].mean(axis=1)
+            satellite_score = weights['satellite'] * satellite_avg
+            score_components.append(satellite_score)
+        
+        # Combine all available components
+        if score_components:
+            df['alt_data_score'] = sum(score_components) / len(score_components) * len(weights)
+        
+        # Add confidence score based on data availability
+        df['alt_data_confidence'] = len(score_components) / len(weights)
+        
+        return df[['ticker', 'alt_data_score', 'alt_data_confidence', 'timestamp']]
 
 
 # Example usage
