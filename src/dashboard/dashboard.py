@@ -73,34 +73,65 @@ with st.sidebar:
         "Select Assets",
         options=['AAPL', 'GOOGL', 'MSFT', 'NVDA', 'AMZN', 'META', 'TSLA', 
                 'JPM', 'GS', 'BAC', 'JNJ', 'PFE', 'XOM', 'CVX'],
-        default=default_tickers
+        default=default_tickers,
+        key="ticker_selection"
     )
     
     optimization_method = st.selectbox(
         "Optimization Method",
-        ["Maximum Sharpe Ratio", "Minimum Variance", "Risk Parity", "Equal Weight"]
+        ["Maximum Sharpe Ratio", "Minimum Variance", "Risk Parity", "Equal Weight"],
+        key="opt_method"
     )
     
-    use_ml = st.checkbox("Use ML Predictions", value=True)
-    use_alt_data = st.checkbox("Include Alternative Data", value=True)
+    use_ml = st.checkbox("Use ML Predictions", value=True, key="use_ml_checkbox")
+    use_alt_data = st.checkbox("Include Alternative Data", value=True, key="use_alt_checkbox")
     
     st.divider()
     
     # Risk parameters
     st.subheader("Risk Parameters")
-    risk_free_rate = st.slider("Risk-Free Rate (%)", 0.0, 10.0, 4.0, 0.1) / 100
-    max_position = st.slider("Max Position Size (%)", 10, 50, 25, 5) / 100
+    risk_free_rate = st.slider("Risk-Free Rate (%)", 0.0, 10.0, 4.0, 0.1, key="risk_free_slider") / 100
+    max_position = st.slider("Max Position Size (%)", 10, 50, 25, 5, key="max_position_slider") / 100
     
     st.divider()
     
-    # Optimization status
-    if 'optimized_weights' in st.session_state:
-        st.success("✅ Portfolio optimized! View results in the Portfolio tab.")
-    else:
-        st.info("👆 Configure your settings above, then click to optimize:")
+    # Create a unique key for current configuration including alt data timestamp
+    alt_data_timestamp = st.session_state.get('alt_data_cache_time', datetime.min).timestamp() if 'alt_data_cache' in st.session_state else 0
+    config_key = f"{sorted(selected_tickers)}_{optimization_method}_{risk_free_rate}_{max_position}_{use_ml}_{use_alt_data}_{alt_data_timestamp}"
     
-    if st.button("🔄 Optimize Portfolio", type="primary", use_container_width=True):
-        st.session_state['optimize'] = True
+    # Check if configuration has changed
+    if 'last_config_key' not in st.session_state:
+        st.session_state['last_config_key'] = None
+    
+    if config_key != st.session_state['last_config_key']:
+        # Configuration changed, clear the optimization
+        if 'optimized_weights' in st.session_state:
+            del st.session_state['optimized_weights']
+        if 'performance_metrics' in st.session_state:
+            del st.session_state['performance_metrics']
+        if 'optimization_timestamp' in st.session_state:
+            del st.session_state['optimization_timestamp']
+        st.session_state['last_config_key'] = config_key
+        
+        # Show notification that optimization will update
+        if selected_tickers:
+            st.info("🔄 Parameters changed - portfolio will re-optimize automatically!", icon="ℹ️")
+    
+    # Optimization status and controls
+    if 'optimized_weights' in st.session_state:
+        st.success("✅ Portfolio optimized! Weights will update automatically when you change parameters.")
+        if st.button("🔄 Force Re-Optimize", type="secondary", use_container_width=True):
+            # Clear optimization to trigger automatic re-optimization
+            if 'optimized_weights' in st.session_state:
+                del st.session_state['optimized_weights']
+            if 'performance_metrics' in st.session_state:
+                del st.session_state['performance_metrics']
+            st.rerun()
+    else:
+        if selected_tickers:
+            st.info("🤖 Portfolio will optimize automatically when you select tickers and set parameters.")
+        else:
+            st.warning("👆 Please select some tickers to begin optimization.")
 
 # Main content area
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Portfolio", "📈 Performance", "🎯 Alternative Data", "⚠️ Risk Analysis", "📑 Reports"])
@@ -112,18 +143,23 @@ with tab1:
     with col1:
         st.subheader("Portfolio Allocation")
         
-        # Check if we should run optimization
-        if selected_tickers and st.session_state.get('optimize', False):
-            # Clear the optimize flag
-            st.session_state['optimize'] = False
-            
+        # Automatically run optimization when parameters change or no weights exist
+        should_optimize = (
+            selected_tickers and 
+            'optimized_weights' not in st.session_state and 
+            len(selected_tickers) > 0
+        )
+        
+        if should_optimize:
             with st.spinner("🤖 Running ML-powered portfolio optimization..."):
                 try:
                     if PORTFOLIO_OPTIMIZER_AVAILABLE:
-                        # Initialize the portfolio optimizer
+                        # Initialize the portfolio optimizer with current parameters
                         optimizer = PortfolioOptimizer(
                             tickers=selected_tickers,
-                            lookback_years=2  # Use 2 years of historical data
+                            lookback_years=2,  # Use 2 years of historical data
+                            risk_free_rate=risk_free_rate,
+                            max_position_size=max_position
                         )
                         
                         # Get alternative data if available
@@ -144,8 +180,15 @@ with tab1:
                         status_text.text("⚖️ Optimizing portfolio...")
                         progress_bar.progress(70)
                         
-                        # Perform optimization using the run() method
-                        optimization_result = optimizer.run()
+                        # Perform optimization using the run() method with selected optimization method
+                        if optimization_method == "Maximum Sharpe Ratio":
+                            optimization_result = optimizer.run(method='max_sharpe')
+                        elif optimization_method == "Minimum Variance":
+                            optimization_result = optimizer.run(method='min_variance')
+                        elif optimization_method == "Risk Parity":
+                            optimization_result = optimizer.run(method='risk_parity')
+                        else:  # Equal Weight
+                            optimization_result = optimizer.run(method='equal_weight')
                         
                         if optimization_result is not None:
                             # Extract weights and convert to pandas Series
@@ -170,9 +213,10 @@ with tab1:
                         status_text.empty()
                         progress_bar.empty()
                         
-                        # Store results in session state
+                        # Store results in session state with timestamp
                         st.session_state['optimized_weights'] = weights
                         st.session_state['performance_metrics'] = performance_metrics
+                        st.session_state['optimization_timestamp'] = datetime.now()
                         st.success("✅ Portfolio optimization completed successfully!")
                     else:
                         # Fallback to smart mock optimization
@@ -251,7 +295,7 @@ with tab1:
             )])
             
             fig.update_layout(
-                title="Optimized Portfolio Weights" if 'optimized_weights' in st.session_state else "Demo Portfolio Weights",
+                title="Optimized Portfolio Weights" if 'optimized_weights' in st.session_state else "Portfolio Weights (Optimizing...)",
                 height=400,
                 showlegend=True
             )
@@ -262,8 +306,20 @@ with tab1:
         st.subheader("Allocation Details")
         
         if selected_tickers:
-            # Use the same weights logic as the chart
+            # Show optimization status and timing
             if 'optimized_weights' in st.session_state:
+                opt_time = st.session_state.get('optimization_timestamp', datetime.now())
+                time_ago = datetime.now() - opt_time
+                if time_ago.total_seconds() < 60:
+                    time_str = f"{int(time_ago.total_seconds())} seconds ago"
+                elif time_ago.total_seconds() < 3600:
+                    time_str = f"{int(time_ago.total_seconds() / 60)} minutes ago"
+                else:
+                    time_str = f"{int(time_ago.total_seconds() / 3600)} hours ago"
+                
+                st.success(f"✅ Optimized {time_str}")
+                
+                # Use the same weights logic as the chart
                 weights = st.session_state['optimized_weights']
                 if isinstance(weights, pd.Series):
                     weights_df = pd.DataFrame({
@@ -276,11 +332,11 @@ with tab1:
                         'Weight (%)': weights * 100
                     }).sort_values('Weight (%)', ascending=False)
             else:
-                demo_weights = np.random.dirichlet(np.ones(len(selected_tickers)) * 2)
+                st.info("⏳ Portfolio will optimize automatically...")
                 weights_df = pd.DataFrame({
                     'Asset': selected_tickers,
-                    'Weight (%)': demo_weights * 100
-                }).sort_values('Weight (%)', ascending=False)
+                    'Weight (%)': [f"Calculating..." for _ in selected_tickers]
+                })
             
             st.dataframe(
                 weights_df.style.format({'Weight (%)': '{:.2f}%'}),
@@ -288,16 +344,36 @@ with tab1:
                 hide_index=True
             )
             
-            # Investment calculator
+            # Investment calculator - make it dynamic
             st.divider()
-            investment = st.number_input("Investment Amount ($)", value=100000, step=1000)
+            investment = st.number_input(
+                "Investment Amount ($)", 
+                value=100000, 
+                step=1000,
+                min_value=0,
+                key="investment_amount"
+            )
             
-            weights_df['Allocation ($)'] = weights_df['Weight (%)'] / 100 * investment
+            # Update allocation based on current investment amount
+            if 'optimized_weights' in st.session_state and investment > 0:
+                weights_df['Allocation ($)'] = weights_df['Weight (%)'] / 100 * investment
+            else:
+                weights_df['Allocation ($)'] = 0
+                
             st.dataframe(
                 weights_df[['Asset', 'Allocation ($)']].style.format({'Allocation ($)': '${:,.0f}'}),
                 use_container_width=True,
                 hide_index=True
             )
+            
+            # Show optimization method and parameters
+            if 'optimized_weights' in st.session_state:
+                st.divider()
+                st.caption("📊 Optimization Details")
+                st.text(f"Method: {optimization_method}")
+                st.text(f"Risk-Free Rate: {risk_free_rate:.2%}")
+                st.text(f"Max Position: {max_position:.1%}")
+                st.text(f"ML Predictions: {'Yes' if use_ml else 'No'}")
 
 # Tab 2: Performance
 with tab2:
