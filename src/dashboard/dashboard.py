@@ -96,8 +96,16 @@ with st.sidebar:
     st.divider()
     
     # Create a unique key for current configuration including alt data timestamp
-    alt_data_timestamp = st.session_state.get('alt_data_cache_time', datetime.min).timestamp() if 'alt_data_cache' in st.session_state else 0
-    config_key = f"{sorted(selected_tickers)}_{optimization_method}_{risk_free_rate}_{max_position}_{use_ml}_{use_alt_data}_{alt_data_timestamp}"
+    # Round float values to avoid precision issues
+    risk_free_rate_rounded = round(risk_free_rate, 3)
+    max_position_rounded = round(max_position, 3)
+    
+    # Use a stable timestamp for alt data (only update when cache actually changes)
+    alt_data_key = 0
+    if 'alt_data_cache' in st.session_state and 'alt_data_cache_time' in st.session_state:
+        alt_data_key = int(st.session_state['alt_data_cache_time'].timestamp() / 3600)  # Hour precision
+    
+    config_key = f"{sorted(selected_tickers)}_{optimization_method}_{risk_free_rate_rounded}_{max_position_rounded}_{use_ml}_{use_alt_data}_{alt_data_key}"
     
     # Check if configuration has changed
     if 'last_config_key' not in st.session_state:
@@ -217,6 +225,7 @@ with tab1:
                         st.session_state['optimized_weights'] = weights
                         st.session_state['performance_metrics'] = performance_metrics
                         st.session_state['optimization_timestamp'] = datetime.now()
+                        st.session_state['last_optimization_method'] = optimization_method
                         st.success("✅ Portfolio optimization completed successfully!")
                     else:
                         # Fallback to smart mock optimization
@@ -319,6 +328,10 @@ with tab1:
                 
                 st.success(f"✅ Optimized {time_str}")
                 
+                # Debug info: Show optimization method used
+                if 'last_optimization_method' in st.session_state:
+                    st.info(f"🔧 Method: {st.session_state['last_optimization_method']}")
+                
                 # Use the same weights logic as the chart
                 weights = st.session_state['optimized_weights']
                 if isinstance(weights, pd.Series):
@@ -338,11 +351,19 @@ with tab1:
                     'Weight (%)': [f"Calculating..." for _ in selected_tickers]
                 })
             
-            st.dataframe(
-                weights_df.style.format({'Weight (%)': '{:.2f}%'}),
-                use_container_width=True,
-                hide_index=True
-            )
+            # Display the weights table with high precision to show differences
+            if 'optimized_weights' in st.session_state:
+                st.dataframe(
+                    weights_df.style.format({'Weight (%)': '{:.3f}%'}),  # 3 decimal places to show differences
+                    use_container_width=True,
+                    hide_index=True
+                )
+            else:
+                st.dataframe(
+                    weights_df,
+                    use_container_width=True,
+                    hide_index=True
+                )
             
             # Investment calculator - make it dynamic
             st.divider()
