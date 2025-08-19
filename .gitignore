@@ -17,3 +17,22 @@ logs/
 *.h5
 api_keys.json
 credentials/
+
+# Generated reports and outputs
+reports/*.csv
+reports/*.json
+dashboard_test_report.json
+test_output.pdf
+
+# Test files and development artifacts
+test_*.py
+*_test.py
+validate_*.py
+quick_*.py
+
+# Temporary documentation
+*_GUIDE.md
+*_SUMMARY.md
+*_REPORT.md
+*_IMPROVEMENTS.md
+FIXES_*.md

@@ -17,6 +17,7 @@ pandas-ta
 # Alternative Data
 tweepy
 praw
+asyncpraw
 newsapi-python
 beautifulsoup4
 pytrends

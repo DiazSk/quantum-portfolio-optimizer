@@ -1,6 +1,6 @@
 """
-Portfolio Optimizer - FINAL WORKING VERSION
-All data structure issues fixed!
+Portfolio Optimizer - DYNAMIC ML VERSION
+ML predictions now vary between runs
 """
 
 import numpy as np
@@ -17,15 +17,30 @@ warnings.filterwarnings('ignore')
 class PortfolioOptimizer:
     """Portfolio optimizer with dynamic ML predictions"""
     
-    def __init__(self, tickers, lookback_years=2, risk_tolerance=5, optimization_method="Maximum Sharpe Ratio"):
+    def __init__(self, tickers, lookback_years=2, risk_free_rate=0.04, max_position_size=0.60, use_random_state=False):
         self.tickers = tickers
         self.lookback_years = lookback_years
-        self.risk_tolerance = risk_tolerance
-        self.optimization_method = optimization_method
+        self.risk_free_rate = risk_free_rate
+        self.max_position_size = max_position_size
         self.prices = None
         self.returns = None
         self.ml_models = {}
+        self.use_random_state = use_random_state  # Control randomness
+
+    def detect_market_regime(self, returns):
+        """Detect current market regime for adaptive predictions"""
+        recent_returns = returns.tail(20).mean()
+        recent_vol = returns.tail(20).std()
         
+        if recent_vol > returns.std() * 1.5:
+            return "high_volatility"
+        elif recent_returns < 0:
+            return "bearish"
+        elif recent_returns > returns.mean() * 1.5:
+            return "bullish"
+        else:
+            return "neutral"
+
     def calculate_rsi(self, prices, period=14):
         """Calculate RSI"""
         delta = prices.diff()
@@ -117,40 +132,94 @@ class PortfolioOptimizer:
             return None
     
     def train_ml_models(self):
-        """Train XGBoost for return prediction"""
+        """Train XGBoost with DYNAMIC predictions and market regime awareness"""
         if self.returns is None or self.returns.empty:
             print("❌ No data available for ML training")
             return {}
             
         print("\n🤖 Training ML models for return prediction...")
+        
+        # DETECT MARKET REGIME HERE
+        market_regime = self.detect_market_regime(self.returns.mean(axis=1))
+        print(f"   📊 Market Regime Detected: {market_regime.upper()}")
+        
         predictions = {}
         
-        for ticker in self.prices.columns:
+        # Generate a unique seed based on current time if not using fixed seed
+        import time
+        if not self.use_random_state:
+            base_seed = None  # True randomness
+            print("   Using dynamic ML predictions (random forest)")
+        else:
+            base_seed = 42
+            print("   Using fixed random state for reproducibility")
+        
+        # ADJUST HYPERPARAMETERS BASED ON MARKET REGIME
+        if market_regime == "high_volatility":
+            # More conservative in volatile markets
+            n_estimators_range = (40, 60)  # More trees for stability
+            max_depth_range = (2, 3)  # Shallower trees
+            learning_rate_range = (0.03, 0.08)  # Lower learning rate
+            prediction_adjustment = 0.7  # Reduce prediction magnitude
+            print("   ⚠️ High volatility mode: Using conservative parameters")
+        elif market_regime == "bearish":
+            # Defensive in bear markets
+            n_estimators_range = (35, 50)
+            max_depth_range = (2, 4)
+            learning_rate_range = (0.05, 0.10)
+            prediction_adjustment = 0.5  # More conservative predictions
+            print("   🐻 Bearish mode: Using defensive parameters")
+        elif market_regime == "bullish":
+            # More aggressive in bull markets
+            n_estimators_range = (25, 40)
+            max_depth_range = (3, 5)
+            learning_rate_range = (0.10, 0.20)
+            prediction_adjustment = 1.2  # Slightly amplify positive predictions
+            print("   🐂 Bullish mode: Using growth-oriented parameters")
+        else:  # neutral
+            # Standard parameters
+            n_estimators_range = (25, 50)
+            max_depth_range = (2, 5)
+            learning_rate_range = (0.05, 0.20)
+            prediction_adjustment = 1.0
+            print("   ⚖️ Neutral mode: Using balanced parameters")
+        
+        for i, ticker in enumerate(self.prices.columns):
             try:
-                # Create basic features (simplified to avoid errors)
+                # Create features with some randomness in feature engineering
                 features = pd.DataFrame(index=self.prices.index)
                 
-                # Basic features that are safe
+                # Basic features
                 features['returns_5d'] = self.returns[ticker].rolling(5).mean()
                 features['returns_20d'] = self.returns[ticker].rolling(20).mean()
                 features['volatility'] = self.returns[ticker].rolling(20).std()
+                features['rsi'] = self.calculate_rsi(self.prices[ticker])
                 
-                # Safe RSI calculation
-                try:
-                    features['rsi'] = self.calculate_rsi(self.prices[ticker])
-                except:
-                    features['rsi'] = 50  # Default neutral RSI
+                # ADD REGIME-SPECIFIC FEATURES
+                if market_regime == "high_volatility":
+                    # Add more volatility-focused features
+                    features['volatility_5d'] = self.returns[ticker].rolling(5).std()
+                    features['volatility_ratio'] = features['volatility_5d'] / features['volatility']
+                elif market_regime == "bearish":
+                    # Add downside risk features
+                    features['downside_vol'] = self.returns[ticker][self.returns[ticker] < 0].rolling(20).std()
+                    features['max_drawdown_20d'] = self.returns[ticker].rolling(20).min()
+                elif market_regime == "bullish":
+                    # Add momentum features
+                    features['momentum_10d'] = self.returns[ticker].rolling(10).mean()
+                    features['momentum_30d'] = self.returns[ticker].rolling(30).mean()
                 
-                # Add simple risk-based features
-                if self.risk_tolerance >= 7:
-                    # Aggressive: Short-term momentum
-                    features['momentum'] = self.returns[ticker].rolling(3).mean()
-                elif self.risk_tolerance <= 4:
-                    # Conservative: Longer-term stability
-                    features['long_trend'] = self.returns[ticker].rolling(60).mean()
-                else:
-                    # Moderate: Balanced
-                    features['medium_trend'] = self.returns[ticker].rolling(15).mean()
+                # Add random feature windows for diversity
+                if not self.use_random_state:
+                    momentum_window = np.random.randint(10, 30)
+                    features[f'momentum_{momentum_window}'] = self.returns[ticker].rolling(momentum_window).mean()
+                    
+                    # Add volume-based feature if possible
+                    vol_window = np.random.randint(5, 15)
+                    features[f'vol_ratio_{vol_window}'] = (
+                        self.returns[ticker].rolling(vol_window).std() / 
+                        self.returns[ticker].rolling(vol_window * 2).std()
+                    )
                 
                 # Target
                 target = self.returns[ticker].shift(-1)
@@ -160,87 +229,142 @@ class PortfolioOptimizer:
                 X = features[valid_mask].values
                 y = target[valid_mask].values
                 
-                if len(X) > 50 and len(y) > 50:
-                    # Use safer random state generation
-                    try:
-                        import time
-                        base_seed = hash(str(self.risk_tolerance)) % 1000
-                        time_component = int(time.time() * 1000) % 100
-                        dynamic_seed = (base_seed + time_component) % 2**31  # Ensure positive 32-bit int
-                    except:
-                        dynamic_seed = 42 + self.risk_tolerance  # Fallback
+                if len(X) > 50:
+                    # USE REGIME-ADJUSTED HYPERPARAMETERS
+                    if not self.use_random_state:
+                        n_estimators = np.random.randint(*n_estimators_range)
+                        max_depth = np.random.randint(*max_depth_range)
+                        learning_rate = np.random.uniform(*learning_rate_range)
+                        subsample = np.random.uniform(0.6, 0.9)
+                        
+                        model_seed = None  # This ensures different results each run
+                    else:
+                        n_estimators = 30
+                        max_depth = 3
+                        learning_rate = 0.1
+                        subsample = 0.8
+                        model_seed = base_seed + i if base_seed else None
                     
-                    # Train model with safer parameters
+                    # Train model with dynamic parameters
                     model = xgb.XGBRegressor(
-                        n_estimators=min(50, 30 + (self.risk_tolerance * 2)),
-                        max_depth=min(6, 3 + (self.risk_tolerance // 3)),
-                        random_state=dynamic_seed,
-                        learning_rate=min(0.3, 0.1 + (self.risk_tolerance * 0.01)),
+                        n_estimators=n_estimators,
+                        max_depth=max_depth,
+                        learning_rate=learning_rate,
+                        subsample=subsample,
+                        random_state=model_seed,
                         verbosity=0
                     )
                     
-                    # Train on most data
-                    split = int(len(X) * 0.8)
-                    if split > 10:  # Ensure we have enough training data
-                        model.fit(X[:split], y[:split])
-                        
-                        # Make prediction
-                        last_features = features.dropna().iloc[-1:].values
-                        if len(last_features) > 0 and last_features.shape[1] == X.shape[1]:
-                            base_pred = model.predict(last_features)[0]
-                            
-                            # Apply strategy-based adjustments
-                            if self.optimization_method == "Maximum Return":
-                                risk_multiplier = 1 + (self.risk_tolerance - 5) * 0.1
-                                adjusted_pred = base_pred * risk_multiplier
-                            elif self.optimization_method == "Minimum Volatility":
-                                risk_multiplier = max(0.5, 1 - (self.risk_tolerance - 5) * 0.05)
-                                adjusted_pred = base_pred * risk_multiplier
-                            else:  # Maximum Sharpe Ratio or others
-                                risk_multiplier = 1 + (self.risk_tolerance - 5) * 0.05
-                                adjusted_pred = base_pred * risk_multiplier
-                            
-                            predictions[ticker] = adjusted_pred
-                            print(f"  {ticker}: Predicted return = {adjusted_pred:+.3%} (risk={self.risk_tolerance}, method={self.optimization_method})")
-                        else:
-                            predictions[ticker] = self.returns[ticker].mean()
-                            print(f"  {ticker}: Using historical mean (feature mismatch)")
+                    # Random train/test split
+                    if not self.use_random_state:
+                        split_ratio = np.random.uniform(0.7, 0.85)
                     else:
-                        predictions[ticker] = self.returns[ticker].mean()
-                        print(f"  {ticker}: Using historical mean (insufficient data)")
+                        split_ratio = 0.8
+                    
+                    split = int(len(X) * split_ratio)
+                    model.fit(X[:split], y[:split])
+                    
+                    # Make prediction with regime adjustment
+                    if len(features.dropna()) > 0:
+                        last_features = features.dropna().iloc[-1:].values
+                        pred = model.predict(last_features)[0]
+                        
+                        # APPLY REGIME-BASED ADJUSTMENT
+                        pred = pred * prediction_adjustment
+                        
+                        # Add small market noise for realism
+                        if not self.use_random_state:
+                            # Regime-specific noise
+                            if market_regime == "high_volatility":
+                                market_noise = np.random.normal(0, 0.0005)  # Higher noise
+                            else:
+                                market_noise = np.random.normal(0, 0.0002)  # Normal noise
+                            pred = pred + market_noise
+                        
+                        predictions[ticker] = pred
+                        print(f"  {ticker}: Predicted return = {pred:+.3%} "
+                              f"(n={n_estimators}, d={max_depth}, lr={learning_rate:.3f})")
+                    else:
+                        predictions[ticker] = self.returns[ticker].mean() * prediction_adjustment
                 else:
-                    predictions[ticker] = self.returns[ticker].mean()
-                    print(f"  {ticker}: Using historical mean (not enough samples)")
+                    # Not enough data, use historical mean with regime adjustment
+                    base_return = self.returns[ticker].mean() * prediction_adjustment
+                    if not self.use_random_state:
+                        noise = np.random.normal(0, 0.0001)
+                        predictions[ticker] = base_return + noise
+                    else:
+                        predictions[ticker] = base_return
+                    print(f"  {ticker}: Using historical mean (regime-adjusted)")
                     
             except Exception as e:
-                print(f"  {ticker}: Error - {str(e)[:50]}, using historical mean")
-                try:
-                    predictions[ticker] = self.returns[ticker].mean()
-                except:
-                    predictions[ticker] = 0.0
+                print(f"  {ticker}: Error - {str(e)[:30]}")
+                predictions[ticker] = 0.0
+        
+        # Show prediction variance with regime info
+        if predictions:
+            pred_values = list(predictions.values())
+            print(f"\n  📊 Prediction Summary ({market_regime} market):")
+            print(f"     Mean: {np.mean(pred_values):+.3%}")
+            print(f"     Std:  {np.std(pred_values):.3%}")
+            print(f"     Range: [{min(pred_values):+.3%}, {max(pred_values):+.3%}]")
                 
         return predictions
     
-    def optimize_portfolio(self, expected_returns, cov_matrix):
-        """Simple Sharpe optimization"""
+    def optimize_portfolio(self, expected_returns, cov_matrix, method='max_sharpe'):
+        """Optimize portfolio with different methods"""
         n_assets = len(expected_returns)
         
-        # Optimization function
-        def neg_sharpe(weights):
-            ret = np.dot(weights, expected_returns)
-            vol = np.sqrt(np.dot(weights, np.dot(cov_matrix, weights)))
-            return -ret/vol if vol > 0 else 0
+        if method == 'equal_weight':
+            # Equal weight portfolio
+            return np.array([1/n_assets] * n_assets)
         
-        # Constraints and bounds
-        constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
-        bounds = tuple((0, 1) for _ in range(n_assets))
-        initial = np.array([1/n_assets] * n_assets)
+        elif method == 'risk_parity':
+            # Risk parity - equal risk contribution
+            def risk_parity_objective(weights):
+                portfolio_vol = np.sqrt(np.dot(weights, np.dot(cov_matrix, weights)))
+                marginal_contrib = np.dot(cov_matrix, weights) / portfolio_vol
+                contrib = weights * marginal_contrib
+                # Minimize variance of risk contributions
+                return np.var(contrib)
+            
+            constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
+            bounds = tuple((0, self.max_position_size) for _ in range(n_assets))
+            initial = np.array([1/n_assets] * n_assets)
+            
+            result = minimize(risk_parity_objective, initial, method='SLSQP',
+                            bounds=bounds, constraints=constraints)
+            return result.x
         
-        # Optimize
-        result = minimize(neg_sharpe, initial, method='SLSQP', 
-                         bounds=bounds, constraints=constraints)
+        elif method == 'min_variance':
+            # Minimum variance portfolio
+            def portfolio_variance(weights):
+                return np.dot(weights, np.dot(cov_matrix, weights))
+            
+            constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
+            bounds = tuple((0, self.max_position_size) for _ in range(n_assets))
+            initial = np.array([1/n_assets] * n_assets)
+            
+            result = minimize(portfolio_variance, initial, method='SLSQP',
+                            bounds=bounds, constraints=constraints)
+            return result.x
         
-        return result.x
+        else:  # max_sharpe (default)
+            # Maximum Sharpe ratio optimization
+            def neg_sharpe(weights):
+                ret = np.dot(weights, expected_returns) - self.risk_free_rate
+                vol = np.sqrt(np.dot(weights, np.dot(cov_matrix, weights)))
+                return -ret/vol if vol > 0 else 0
+            
+            # Constraints and bounds
+            constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
+            bounds = tuple((0, self.max_position_size) for _ in range(n_assets))
+            initial = np.array([1/n_assets] * n_assets)
+            
+            # Optimize
+            result = minimize(neg_sharpe, initial, method='SLSQP', 
+                             bounds=bounds, constraints=constraints)
+            
+            return result.x
     
     def calculate_metrics(self, weights):
         """Calculate portfolio metrics"""
@@ -248,7 +372,7 @@ class PortfolioOptimizer:
         
         annual_return = portfolio_returns.mean() * 252
         annual_vol = portfolio_returns.std() * np.sqrt(252)
-        sharpe = annual_return / annual_vol if annual_vol > 0 else 0
+        sharpe = (annual_return - self.risk_free_rate) / annual_vol if annual_vol > 0 else 0
         
         # VaR
         var_95 = np.percentile(portfolio_returns, 5)
@@ -267,8 +391,8 @@ class PortfolioOptimizer:
             'max_drawdown': max_dd
         }
     
-    def run(self):
-        """Main optimization pipeline"""
+    def run(self, method='max_sharpe'):
+        """Main optimization pipeline with method selection"""
         # Get data
         self.fetch_data()
         
@@ -276,7 +400,7 @@ class PortfolioOptimizer:
             print("❌ No data available for optimization")
             return None
         
-        # Get expected returns
+        # Get expected returns with DYNAMIC ML predictions
         print("\n📈 Calculating expected returns...")
         ml_predictions = self.train_ml_models()
         
@@ -290,8 +414,8 @@ class PortfolioOptimizer:
         cov_matrix = self.returns.cov().values * 252
         
         # Optimize
-        print("\n⚖️ Optimizing portfolio...")
-        weights = self.optimize_portfolio(expected_returns, cov_matrix)
+        print(f"\n⚖️ Optimizing portfolio using {method} method...")
+        weights = self.optimize_portfolio(expected_returns, cov_matrix, method=method)
         
         # Clean weights
         weights = np.round(weights, 4)
@@ -305,57 +429,3 @@ class PortfolioOptimizer:
             'weights': weights,
             'metrics': metrics
         }
-
-def main():
-    """Run the portfolio optimization"""
-    print("\n" + "="*60)
-    print("🚀 QUANTUM PORTFOLIO OPTIMIZER v3.0 (FIXED)")
-    print("="*60)
-    
-    # Portfolio universe
-    tickers = ['AAPL', 'GOOGL', 'MSFT', 'NVDA', 'AMZN', 'META', 'JPM', 'XOM']
-    print(f"\n📌 Target Portfolio: {', '.join(tickers)}")
-    
-    # Run optimizer
-    optimizer = PortfolioOptimizer(tickers, lookback_years=2)
-    result = optimizer.run()
-    
-    if result is None:
-        print("\n❌ Optimization failed")
-        return
-    
-    # Display results
-    print("\n" + "="*60)
-    print("📊 OPTIMIZED PORTFOLIO")
-    print("="*60)
-    
-    for ticker, weight in zip(result['tickers'], result['weights']):
-        if weight > 0.01:
-            bar = '█' * int(weight * 50)
-            print(f"{ticker:6s}: {weight:6.2%} {bar}")
-    
-    print("\n" + "="*60)
-    print("📈 PERFORMANCE METRICS")
-    print("="*60)
-    
-    metrics = result['metrics']
-    print(f"Expected Return:  {metrics['return']:+.1%} per year")
-    print(f"Volatility:       {metrics['volatility']:.1%}")
-    print(f"Sharpe Ratio:     {metrics['sharpe']:.2f}")
-    print(f"Value at Risk:    {metrics['var_95']:.3%} (95% confidence)")
-    print(f"Max Drawdown:     {metrics['max_drawdown']:.1%}")
-    
-    # Save results
-    df = pd.DataFrame({
-        'Ticker': result['tickers'],
-        'Weight': result['weights']
-    })
-    df.to_csv('data/portfolio_optimized.csv', index=False)
-    
-    print("\n✅ Results saved to portfolio_optimized.csv")
-    print("🎉 Optimization complete!")
-    
-    return result
-
-if __name__ == "__main__":
-    result = main()
