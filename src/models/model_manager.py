@@ -19,7 +19,7 @@ project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 sys.path.insert(0, project_root)
 
 from src.portfolio.portfolio_optimizer import PortfolioOptimizer
-from src.data.alternative_data_collector import EnhancedAlternativeDataCollector
+from src.data.alternative_data_collector import AlternativeDataCollector
 from tests.backtesting_engine import PortfolioBacktester
 
 
@@ -101,7 +101,7 @@ def run_complete_pipeline():
     print("-" * 40)
     
     try:
-        collector = EnhancedAlternativeDataCollector(tickers)
+        collector = AlternativeDataCollector(tickers)
         
         # Check if we have the required API keys
         required_keys = ['ALPHA_VANTAGE_API_KEY', 'REDDIT_CLIENT_ID', 'NEWS_API_KEY']
@@ -316,7 +316,7 @@ def test_system():
     # Test 1: Import check
     try:
         from src.portfolio.portfolio_optimizer import PortfolioOptimizer
-        from src.data.alternative_data_collector import EnhancedAlternativeDataCollector
+        from src.data.alternative_data_collector import AlternativeDataCollector
         from tests.backtesting_engine import PortfolioBacktester
         print("✅ Test 1: All imports successful")
         tests_passed += 1
