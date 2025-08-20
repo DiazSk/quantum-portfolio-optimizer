@@ -1,0 +1,54 @@
+# Prometheus Configuration for Portfolio Optimizer Monitoring
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
+  - "portfolio_rules.yml"
+
+scrape_configs:
+  # Main application metrics
+  - job_name: 'portfolio-optimizer-app'
+    static_configs:
+      - targets: ['app:9090']
+    scrape_interval: 5s
+    metrics_path: /metrics
+    honor_labels: true
+
+  # PostgreSQL metrics
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    scrape_interval: 10s
+
+  # Redis metrics
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 10s
+
+  # Celery worker metrics
+  - job_name: 'celery-workers'
+    static_configs:
+      - targets: ['worker:9091']
+    scrape_interval: 15s
+
+  # System metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['localhost:9100']
+    scrape_interval: 15s
+
+  # Nginx metrics
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:9113']
+    scrape_interval: 10s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093

@@ -1,0 +1,224 @@
+# Alert Rules for Portfolio Optimizer
+# Production-grade alerting for FAANG-level monitoring
+
+groups:
+  - name: portfolio_alerts
+    rules:
+      # Critical Portfolio Alerts
+      - alert: PortfolioLargeLoss
+        expr: portfolio:daily_return_pct < -5
+        for: 1m
+        labels:
+          severity: critical
+          team: portfolio_management
+        annotations:
+          summary: "Portfolio experiencing large daily loss"
+          description: "Portfolio {{ $labels.portfolio_id }} has lost {{ $value }}% today"
+
+      - alert: PortfolioMaxDrawdownExceeded
+        expr: portfolio:max_drawdown_pct < -20
+        for: 5m
+        labels:
+          severity: critical
+          team: risk_management
+        annotations:
+          summary: "Portfolio maximum drawdown limit exceeded"
+          description: "Portfolio {{ $labels.portfolio_id }} drawdown is {{ $value }}%"
+
+      - alert: RiskMetricsOutOfBounds
+        expr: portfolio:sharpe_ratio < 0.5 or portfolio:volatility_30d > 0.25
+        for: 10m
+        labels:
+          severity: warning
+          team: risk_management
+        annotations:
+          summary: "Portfolio risk metrics outside acceptable range"
+          description: "Sharpe ratio: {{ $labels.sharpe_ratio }}, Volatility: {{ $labels.volatility }}"
+
+  - name: system_alerts
+    rules:
+      # Application Health
+      - alert: ApplicationDown
+        expr: up{job="portfolio-optimizer-app"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: infrastructure
+        annotations:
+          summary: "Portfolio optimizer application is down"
+          description: "Main application has been down for more than 2 minutes"
+
+      - alert: HighMemoryUsage
+        expr: (1 - memory_available_bytes / memory_total_bytes) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 90% for 5 minutes"
+
+      - alert: DatabaseConnectionFailure
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: infrastructure
+        annotations:
+          summary: "Database connection failed"
+          description: "PostgreSQL database is not responding"
+
+      - alert: RedisConnectionFailure
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: infrastructure
+        annotations:
+          summary: "Redis cache connection failed"
+          description: "Redis cache is not responding"
+
+  - name: optimization_alerts
+    rules:
+      # Optimization Performance
+      - alert: OptimizationFailureRate
+        expr: optimizer:success_rate_pct < 95
+        for: 10m
+        labels:
+          severity: warning
+          team: quant_team
+        annotations:
+          summary: "High optimization failure rate"
+          description: "Optimization success rate is {{ $value }}% over last 10 minutes"
+
+      - alert: SlowOptimization
+        expr: optimizer:avg_execution_time_seconds > 300
+        for: 5m
+        labels:
+          severity: warning
+          team: performance
+        annotations:
+          summary: "Optimization taking too long"
+          description: "Average optimization time is {{ $value }} seconds"
+
+  - name: data_alerts
+    rules:
+      # Data Quality
+      - alert: StaleData
+        expr: data:staleness_minutes > 60
+        for: 5m
+        labels:
+          severity: warning
+          team: data_engineering
+        annotations:
+          summary: "Data is becoming stale"
+          description: "Data last updated {{ $value }} minutes ago"
+
+      - alert: APIFailureRate
+        expr: api:success_rate_pct < 90
+        for: 5m
+        labels:
+          severity: warning
+          team: data_engineering
+        annotations:
+          summary: "High API failure rate"
+          description: "API success rate is {{ $value }}% for {{ $labels.api_name }}"
+
+      - alert: SlowAPIResponse
+        expr: api:avg_response_time_ms > 5000
+        for: 5m
+        labels:
+          severity: warning
+          team: data_engineering
+        annotations:
+          summary: "Slow API response times"
+          description: "{{ $labels.api_name }} response time is {{ $value }}ms"
+
+  - name: ml_alerts
+    rules:
+      # Machine Learning Model Health
+      - alert: ModelAccuracyDrop
+        expr: ml:model_accuracy_pct < 70
+        for: 15m
+        labels:
+          severity: warning
+          team: ml_engineering
+        annotations:
+          summary: "Model accuracy has dropped"
+          description: "Model {{ $labels.model_name }} accuracy is {{ $value }}%"
+
+      - alert: ModelDrift
+        expr: ml:prediction_drift_score > 0.1
+        for: 30m
+        labels:
+          severity: warning
+          team: ml_engineering
+        annotations:
+          summary: "Model prediction drift detected"
+          description: "Model {{ $labels.model_name }} drift score is {{ $value }}"
+
+      - alert: ModelTrainingOverdue
+        expr: ml:training_frequency_hours > 168  # 1 week
+        for: 1h
+        labels:
+          severity: warning
+          team: ml_engineering
+        annotations:
+          summary: "Model training is overdue"
+          description: "Model {{ $labels.model_name }} hasn't been retrained for {{ $value }} hours"
+
+  - name: business_alerts
+    rules:
+      # Business Metrics
+      - alert: AUMDecline
+        expr: business:aum_growth_rate_daily_pct < -2
+        for: 1h
+        labels:
+          severity: warning
+          team: business
+        annotations:
+          summary: "Assets under management declining"
+          description: "AUM has declined {{ $value }}% today"
+
+      - alert: LowAlphaGeneration
+        expr: business:excess_return_vs_benchmark_pct < 0
+        for: 6h
+        labels:
+          severity: warning
+          team: portfolio_management
+        annotations:
+          summary: "Portfolio underperforming benchmark"
+          description: "Excess return is {{ $value }}% over 6 hours"
+
+      - alert: HighInfrastructureCost
+        expr: business:cost_per_optimization_dollars > 10
+        for: 1h
+        labels:
+          severity: warning
+          team: finance
+        annotations:
+          summary: "Infrastructure costs are high"
+          description: "Cost per optimization is ${{ $value }}"
+
+  - name: security_alerts
+    rules:
+      # Security Monitoring
+      - alert: UnusualAPIActivity
+        expr: rate(api_requests_total[5m]) > 100
+        for: 2m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "Unusual API activity detected"
+          description: "API request rate is {{ $value }} requests/second"
+
+      - alert: FailedAuthentications
+        expr: rate(auth_failures_total[5m]) > 5
+        for: 1m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "Multiple authentication failures"
+          description: "{{ $value }} failed authentications per second"

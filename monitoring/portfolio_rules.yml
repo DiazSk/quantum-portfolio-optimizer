@@ -1,0 +1,114 @@
+# Portfolio-specific Prometheus Recording Rules
+# Custom metrics for FAANG-level portfolio analytics
+
+groups:
+  - name: portfolio_performance
+    rules:
+      # Portfolio Return Metrics
+      - record: portfolio:daily_return_pct
+        expr: (portfolio_value_current - portfolio_value_previous) / portfolio_value_previous * 100
+        labels:
+          metric_type: "performance"
+
+      - record: portfolio:cumulative_return_pct
+        expr: (portfolio_value_current - portfolio_value_initial) / portfolio_value_initial * 100
+        labels:
+          metric_type: "performance"
+
+      # Risk Metrics
+      - record: portfolio:sharpe_ratio
+        expr: (portfolio_return_annual - risk_free_rate) / portfolio_volatility_annual
+        labels:
+          metric_type: "risk"
+
+      - record: portfolio:volatility_30d
+        expr: stddev_over_time(portfolio_daily_return[30d])
+        labels:
+          metric_type: "risk"
+
+      - record: portfolio:max_drawdown_pct
+        expr: min_over_time(portfolio_cumulative_return_pct[90d])
+        labels:
+          metric_type: "risk"
+
+  - name: portfolio_optimization
+    rules:
+      # Optimization Performance
+      - record: optimizer:success_rate_pct
+        expr: rate(optimization_success_total[5m]) * 100
+        labels:
+          metric_type: "optimization"
+
+      - record: optimizer:avg_execution_time_seconds
+        expr: rate(optimization_duration_seconds_sum[5m]) / rate(optimization_duration_seconds_count[5m])
+        labels:
+          metric_type: "optimization"
+
+      # A/B Testing Metrics
+      - record: ab_test:strategy_performance_diff_pct
+        expr: portfolio_strategy_a_return - portfolio_strategy_b_return
+        labels:
+          metric_type: "ab_testing"
+
+  - name: data_quality
+    rules:
+      # Data Freshness
+      - record: data:staleness_minutes
+        expr: (time() - data_last_updated_timestamp) / 60
+        labels:
+          metric_type: "data_quality"
+
+      # API Health
+      - record: api:success_rate_pct
+        expr: rate(api_requests_success_total[5m]) / rate(api_requests_total[5m]) * 100
+        labels:
+          metric_type: "data_quality"
+
+      - record: api:avg_response_time_ms
+        expr: rate(api_request_duration_ms_sum[5m]) / rate(api_request_duration_ms_count[5m])
+        labels:
+          metric_type: "data_quality"
+
+  - name: ml_models
+    rules:
+      # Model Performance
+      - record: ml:model_accuracy_pct
+        expr: ml_model_accuracy * 100
+        labels:
+          metric_type: "ml_performance"
+
+      - record: ml:prediction_drift_score
+        expr: abs(ml_current_predictions - ml_baseline_predictions)
+        labels:
+          metric_type: "ml_performance"
+
+      # Training Metrics
+      - record: ml:training_frequency_hours
+        expr: (time() - ml_last_training_timestamp) / 3600
+        labels:
+          metric_type: "ml_operations"
+
+  - name: business_metrics
+    rules:
+      # Portfolio Size and Growth
+      - record: business:aum_growth_rate_daily_pct
+        expr: rate(portfolio_total_aum[1d]) * 100
+        labels:
+          metric_type: "business"
+
+      - record: business:active_portfolios_count
+        expr: count(portfolio_value_current > 0)
+        labels:
+          metric_type: "business"
+
+      # Alpha Generation
+      - record: business:excess_return_vs_benchmark_pct
+        expr: portfolio_return_pct - benchmark_return_pct
+        labels:
+          metric_type: "business"
+
+      # Cost Efficiency
+      - record: business:cost_per_optimization_dollars
+        expr: infrastructure_cost_daily / optimization_count_daily
+        labels:
+          metric_type: "business"
