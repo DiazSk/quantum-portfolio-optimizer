@@ -41,3 +41,10 @@ requests
 aiohttp
 joblib
 tqdm
+
+# Testing
+pytest
+pytest-mock
+pytest-asyncio
+pytest-cov
+pytest-timeout
