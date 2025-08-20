@@ -240,7 +240,7 @@ class AlternativeDataCollector:
         # Sentiment momentum (recent vs older)
         recent = df[df['days_ago'] <= 3]['sentiment'].mean()
         older = df[df['days_ago'] > 3]['sentiment'].mean()
-        momentum = recent - older if older != 0 else 0
+        momentum = recent - older if not pd.isna(older) and older != 0 else 0
         
         return {
             'sentiment_score': weighted_sentiment,
