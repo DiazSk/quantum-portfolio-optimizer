@@ -399,21 +399,21 @@ class UnifiedDashboard:
         elif selected_tab == "📋 Reports":
             self._render_reports()
     
-    # def _render_header(self):
-    #     """Render dashboard header"""
-    #     st.markdown("""
-    #     <div style="background: linear-gradient(90deg, #1f4e79, #2e86ab); padding: 2rem; border-radius: 10px; margin-bottom: 2rem;">
-    #         <h1 style="color: white; text-align: center; margin: 0;">
-    #             🚀 Quantum Portfolio Optimizer
-    #         </h1>
-    #         <h3 style="color: #a8dadc; text-align: center; margin: 0.5rem 0;">
-    #             Enterprise Portfolio Management Platform
-    #         </h3>
-    #         <p style="color: #f1faee; text-align: center; margin: 0;">
-    #             Live API Integration • Professional Grade • Summer 2026 Applications Ready
-    #         </p>
-    #     </div>
-    #     """, unsafe_allow_html=True)
+    def _render_header(self):
+        """Render dashboard header"""
+        st.markdown("""
+        <div style="background: linear-gradient(90deg, #1f4e79, #2e86ab); padding: 2rem; border-radius: 10px; margin-bottom: 2rem;">
+            <h1 style="color: white; text-align: center; margin: 0;">
+                🚀 Quantum Portfolio Optimizer
+            </h1>
+            <h3 style="color: #a8dadc; text-align: center; margin: 0.5rem 0;">
+                Enterprise Portfolio Management Platform
+            </h3>
+            <p style="color: #f1faee; text-align: center; margin: 0;">
+                Live API Integration • Professional Grade • Summer 2026 Applications Ready
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
     
     def _render_sidebar(self) -> str:
         """Render sidebar navigation and return selected tab"""
