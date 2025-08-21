@@ -45,7 +45,7 @@ except ImportError:
 
 try:
     # Import the unified dashboard that uses only real APIs
-    from src.dashboard.unified_dashboard import main
+    from src.dashboard.unified_dashboard import UnifiedDashboard
     
     # Professional header with live metrics for recruiters
     if demo_available:
@@ -160,10 +160,6 @@ try:
         **Tech Stack:** Python, Streamlit, Real APIs, ML/AI, Live Data Integration
         **GitHub:** https://github.com/DiazSk/quantum-portfolio-optimizer
         """)
-    
-    # Run the unified dashboard with real API data
-    if __name__ == "__main__":
-        main()
         
 except ImportError as e:
     st.error(f"""
@@ -367,3 +363,11 @@ except ImportError as e:
     
     **Full source code and advanced features available on GitHub!**
     """)
+
+# Run the unified dashboard with real API data
+try:
+    dashboard = UnifiedDashboard()
+    dashboard.render_main_dashboard()
+except Exception as e:
+    st.error(f"Dashboard initialization error: {e}")
+    st.info("The platform is operational but some advanced features may require API configuration.")

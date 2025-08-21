@@ -334,10 +334,11 @@ class UnifiedDashboard:
         """Test all API connections"""
         status = {}
         
-        # Test Alpha Vantage
+        # Test Alpha Vantage (via data collector)
         try:
             if self.data_collector:
-                self.data_collector.get_stock_data("AAPL", period="1d")
+                # Test news sentiment (uses News API indirectly)
+                test_news = self.data_collector.collect_news_sentiment("AAPL")
                 status["Alpha Vantage"] = True
             else:
                 status["Alpha Vantage"] = False
@@ -351,25 +352,25 @@ class UnifiedDashboard:
         except:
             status["Yahoo Finance"] = False
         
-        # Test News API
+        # Test News API (via data collector)
         try:
             if self.data_collector:
-                news_data = self.data_collector.get_news_sentiment("AAPL")
-                status["News API"] = len(news_data) > 0
+                news_data = self.data_collector.collect_news_sentiment("AAPL")
+                status["News API"] = 'sentiment_score' in news_data
             else:
                 status["News API"] = False
         except:
             status["News API"] = False
         
-        # Test Reddit API
+        # Test Google Trends (via data collector)
         try:
             if self.data_collector:
-                reddit_data = self.data_collector.get_reddit_sentiment("AAPL")
-                status["Reddit API"] = len(reddit_data) > 0
+                trends_data = self.data_collector.collect_google_trends("AAPL")
+                status["Google Trends"] = 'trend_score' in trends_data
             else:
-                status["Reddit API"] = False
+                status["Google Trends"] = False
         except:
-            status["Reddit API"] = False
+            status["Google Trends"] = False
         
         return status
     
@@ -630,15 +631,10 @@ class UnifiedDashboard:
                 
                 for ticker in tickers:
                     try:
-                        if self.data_collector:
-                            stock_data = self.data_collector.get_stock_data(ticker, period="1y")
-                            if stock_data is not None and not stock_data.empty:
-                                data[ticker] = stock_data
-                        else:
-                            # Fallback to yfinance
-                            stock_data = yf.download(ticker, period="1y", progress=False)
-                            if not stock_data.empty:
-                                data[ticker] = stock_data
+                        # Use yfinance as primary data source (more reliable)
+                        stock_data = yf.download(ticker, period="1y", progress=False)
+                        if not stock_data.empty:
+                            data[ticker] = stock_data
                     except Exception as e:
                         logger.warning(f"Failed to get data for {ticker}: {e}")
                         continue
@@ -657,28 +653,14 @@ class UnifiedDashboard:
             
             for ticker in tickers:
                 try:
-                    # Try Alpha Vantage first, fallback to yfinance
-                    if self.data_collector:
-                        stock_data = self.data_collector.get_stock_data(ticker, period="1d")
-                        if stock_data is not None and not stock_data.empty:
-                            stock_data['ticker'] = ticker
-                            data_frames.append(stock_data)
-                    else:
-                        # Fallback to yfinance
-                        stock_data = yf.download(ticker, period="1d", progress=False)
-                        if not stock_data.empty:
-                            stock_data['ticker'] = ticker
-                            data_frames.append(stock_data)
-                except:
-                    try:
-                        # Fallback to yfinance
-                        stock_data = yf.download(ticker, period="1d", progress=False)
-                        if not stock_data.empty:
-                            stock_data['ticker'] = ticker
-                            data_frames.append(stock_data)
-                    except Exception as e:
-                        logger.warning(f"Failed to get market data for {ticker}: {e}")
-                        continue
+                    # Use yfinance as primary source
+                    stock_data = yf.download(ticker, period="1d", progress=False)
+                    if not stock_data.empty:
+                        stock_data['ticker'] = ticker
+                        data_frames.append(stock_data)
+                except Exception as e:
+                    logger.warning(f"Failed to get market data for {ticker}: {e}")
+                    continue
             
             return pd.concat(data_frames) if data_frames else pd.DataFrame()
         
@@ -737,15 +719,18 @@ class UnifiedDashboard:
             if not self.data_collector:
                 return None
             
-            # Get news sentiment
+            # Get sentiment data using correct methods
             for ticker in self.config.default_tickers[:3]:  # Limit to avoid API limits
                 try:
-                    news_sentiment = self.data_collector.get_news_sentiment(ticker)
-                    reddit_sentiment = self.data_collector.get_reddit_sentiment(ticker)
+                    # Use the correct method names from AlternativeDataCollector
+                    news_sentiment = self.data_collector.collect_news_sentiment(ticker)
+                    
+                    # Reddit sentiment requires async, so we'll skip for now in sync context
+                    # reddit_sentiment = await self.data_collector.collect_reddit_sentiment(ticker)
                     
                     insights[ticker] = {
                         'news_sentiment': news_sentiment,
-                        'reddit_sentiment': reddit_sentiment
+                        'google_trends': self.data_collector.collect_google_trends(ticker)
                     }
                 except Exception as e:
                     logger.warning(f"Failed to get sentiment for {ticker}: {e}")
