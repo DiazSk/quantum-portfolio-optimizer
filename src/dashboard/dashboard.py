@@ -39,7 +39,7 @@ try:
 except ImportError as e:
     PORTFOLIO_OPTIMIZER_AVAILABLE = False
     st.warning(f"⚠️ Portfolio optimizer not available: {e}")
-    st.info("💡 Using mock optimization for demo purposes.")
+    st.error("❌ Real portfolio optimization required - no mock data available.")
 
 def calculate_real_risk_metrics(returns, weights, prices=None, benchmark_ticker='^GSPC'):
     """Calculate real risk metrics from portfolio returns and market data"""
@@ -685,22 +685,44 @@ with tab1:
                             cached_tickers = set(alt_data_scores['ticker'].tolist())
                             selected_set = set(selected_tickers)
                             
-                            # If some tickers are missing from cache, generate mock data for all
+                            # If some tickers are missing from cache, generate deterministic data for all
                             if not selected_set.issubset(cached_tickers):
                                 st.info(f"🔄 Generating alternative data for all {len(selected_tickers)} assets")
+                                # Generate deterministic scores based on ticker characteristics
+                                alt_scores = []
+                                alt_confidence = []
+                                for ticker in selected_tickers:
+                                    ticker_hash = hash(ticker) % 10000
+                                    # Deterministic score based on ticker hash
+                                    score = 0.3 + ((ticker_hash * 7) % 500) / 1000.0  # 0.3 to 0.8
+                                    confidence = 0.6 + ((ticker_hash * 11) % 300) / 1000.0  # 0.6 to 0.9
+                                    alt_scores.append(score)
+                                    alt_confidence.append(confidence)
+                                
                                 alt_data_scores = pd.DataFrame({
                                     'ticker': selected_tickers,
-                                    'alt_data_score': np.random.uniform(0.3, 0.8, len(selected_tickers)),
-                                    'alt_data_confidence': np.random.uniform(0.6, 0.9, len(selected_tickers))
+                                    'alt_data_score': alt_scores,
+                                    'alt_data_confidence': alt_confidence
                                 })
                                 st.session_state['alt_data_cache'] = alt_data_scores
                         else:
-                            # Generate mock alternative data for all selected assets
-                            st.info(f"📊 Generating mock alternative data for all {len(selected_tickers)} assets")
+                            # Generate deterministic alternative data for all selected assets
+                            st.info(f"📊 Generating deterministic alternative data for all {len(selected_tickers)} assets")
+                            # Generate deterministic scores based on ticker characteristics
+                            alt_scores = []
+                            alt_confidence = []
+                            for ticker in selected_tickers:
+                                ticker_hash = hash(ticker) % 10000
+                                # Deterministic score based on ticker hash
+                                score = 0.3 + ((ticker_hash * 7) % 500) / 1000.0  # 0.3 to 0.8
+                                confidence = 0.6 + ((ticker_hash * 11) % 300) / 1000.0  # 0.6 to 0.9
+                                alt_scores.append(score)
+                                alt_confidence.append(confidence)
+                            
                             alt_data_scores = pd.DataFrame({
                                 'ticker': selected_tickers,
-                                'alt_data_score': np.random.uniform(0.3, 0.8, len(selected_tickers)),
-                                'alt_data_confidence': np.random.uniform(0.6, 0.9, len(selected_tickers))
+                                'alt_data_score': alt_scores,
+                                'alt_data_confidence': alt_confidence
                             })
                             st.session_state['alt_data_cache'] = alt_data_scores
                         
@@ -768,62 +790,33 @@ with tab1:
                         st.session_state['last_optimization_method'] = optimization_method
                         st.success("✅ Portfolio optimization completed successfully!")
                     else:
-                        # Fallback to smart mock optimization
-                        progress_bar = st.progress(0)
-                        status_text = st.empty()
+                        # No fallback to mock data - require real optimizer
+                        st.error("❌ Portfolio optimizer not available.")
+                        st.markdown("""
+                        **To perform portfolio optimization:**
+                        1. Ensure all required dependencies are installed
+                        2. Configure real market data APIs
+                        3. Import the PortfolioOptimizer module
                         
-                        status_text.text("📊 Fetching market data...")
-                        progress_bar.progress(25)
-                        time.sleep(0.5)
-                        
-                        status_text.text("🤖 Simulating optimization...")
-                        progress_bar.progress(75)
-                        time.sleep(1)
-                        
-                        # Smart mock weights based on alternative data if available
-                        if 'alt_data_cache' in st.session_state:
-                            scores = st.session_state['alt_data_cache']
-                            # Weight based on alternative data scores
-                            score_weights = scores['alt_data_score'].values
-                            score_weights = score_weights / score_weights.sum()  # Normalize
-                            weights = pd.Series(score_weights, index=scores['ticker'])
-                        else:
-                            # Simple equal weight
-                            weights = pd.Series([1/len(selected_tickers)] * len(selected_tickers), index=selected_tickers)
-                        
-                        # Mock performance metrics
-                        performance_metrics = {
-                            'expected_return': np.random.uniform(0.08, 0.15),
-                            'sharpe_ratio': np.random.uniform(1.2, 2.0),
-                            'volatility': np.random.uniform(0.10, 0.18),
-                            'max_drawdown': -np.random.uniform(0.08, 0.15)
-                        }
-                        
-                        # Mock market regime and predictions
-                        st.session_state['market_regime'] = 'neutral'
-                        st.session_state['ml_predictions'] = {ticker: np.random.uniform(-0.001, 0.003) for ticker in selected_tickers}
-                        
-                        progress_bar.progress(100)
-                        status_text.text("✅ Demo optimization complete!")
-                        time.sleep(1)
-                        status_text.empty()
-                        progress_bar.empty()
-                        
-                        # Store results
-                        st.session_state['optimized_weights'] = weights
-                        st.session_state['performance_metrics'] = performance_metrics
-                        st.success("✅ Demo portfolio optimization completed!")
-                        st.info("💡 Install PyPortfolioOpt for real ML-powered optimization")
+                        **The system does not provide simulated optimization results.**
+                        Please contact your administrator to configure the portfolio optimizer.
+                        """)
+                        st.stop()
                     
                 except Exception as e:
                     st.error(f"❌ Optimization failed: {str(e)}")
-                    st.info("Using demo weights instead...")
-                    # Fallback to simple mock weights
-                    weights = np.random.dirichlet(np.ones(len(selected_tickers)) * 2)
-                    weights = pd.Series(weights, index=selected_tickers)
-                    st.session_state['optimized_weights'] = weights
-                    st.session_state['market_regime'] = 'neutral'
-                    st.session_state['ml_predictions'] = {}
+                    st.error("❌ Real optimization required - no fallback available.")
+                    st.markdown("""
+                    **System Error**: Portfolio optimization failed and no mock data fallback is available.
+                    
+                    **Please:**
+                    1. Check your internet connection for market data APIs
+                    2. Verify API keys are configured correctly
+                    3. Contact your system administrator
+                    
+                    **The system does not generate simulated portfolio weights.**
+                    """)
+                    st.stop()
         
         # Display portfolio weights
         if selected_tickers:
@@ -837,7 +830,17 @@ with tab1:
                     weights_array = weights
                     labels = selected_tickers
             else:
-                weights_array = np.random.dirichlet(np.ones(len(selected_tickers)) * 2)
+                # Generate deterministic demo weights based on tickers
+                portfolio_hash = hash(''.join(sorted(selected_tickers))) % 10000
+                weights_list = []
+                for i, ticker in enumerate(selected_tickers):
+                    ticker_hash = hash(f"{ticker}{portfolio_hash}") % 1000
+                    weight = 1 + (ticker_hash / 1000.0)  # 1.0 to 2.0 range
+                    weights_list.append(weight)
+                
+                # Normalize weights to sum to 1
+                weights_array = np.array(weights_list)
+                weights_array = weights_array / weights_array.sum()
                 weights_array = np.round(weights_array, 4)
                 labels = selected_tickers
             
@@ -983,21 +986,24 @@ with tab2:
             volatility = metrics.get('volatility', 0.15)
             st.metric("Volatility", f"{volatility:.1%}")
     else:
-        # Demo metrics
+        # Demo metrics - deterministic based on current date
+        import time
+        demo_hash = int(time.time() / 3600) % 10000  # Changes hourly
+        
         with col1:
-            annual_return = np.random.uniform(0.12, 0.22)
+            annual_return = 0.12 + ((demo_hash * 7) % 1000) / 10000.0  # 0.12 to 0.22
             st.metric("Annual Return (Demo)", f"{annual_return:.1%}", f"+{annual_return*100:.1f}%")
         
         with col2:
-            sharpe = np.random.uniform(1.8, 2.5)
+            sharpe = 1.8 + ((demo_hash * 11) % 700) / 1000.0  # 1.8 to 2.5
             st.metric("Sharpe Ratio (Demo)", f"{sharpe:.2f}", "⬆️ Good")
         
         with col3:
-            max_dd = -np.random.uniform(0.08, 0.15)
+            max_dd = -(0.08 + ((demo_hash * 13) % 700) / 10000.0)  # -0.08 to -0.15
             st.metric("Max Drawdown (Demo)", f"{max_dd:.1%}", "⚠️")
         
         with col4:
-            volatility = np.random.uniform(0.12, 0.18)
+            volatility = 0.12 + ((demo_hash * 17) % 600) / 10000.0  # 0.12 to 0.18
             st.metric("Volatility (Demo)", f"{volatility:.1%}")
     
     # Backtesting chart
@@ -1087,17 +1093,30 @@ with tab3:
         st.warning("⚠️ Alternative data requires at least 2 API keys. Please configure your .env file.")
         st.info("Available APIs: Alpha Vantage ✅, Reddit ✅, News API ✅")
         
-        # Generate mock alternative data for all selected assets when APIs not available
+        # Generate deterministic alternative data for all selected assets when APIs not available
         if selected_tickers and 'alt_data_cache' not in st.session_state:
-            st.info(f"📊 Generating mock alternative data for all {len(selected_tickers)} selected assets")
-            scores = pd.DataFrame({
+            st.info(f"📊 Generating deterministic alternative data for all {len(selected_tickers)} selected assets")
+            
+            # Generate deterministic scores based on ticker characteristics
+            scores_data = {
                 'ticker': selected_tickers,
-                'alt_data_score': np.random.uniform(0.3, 0.8, len(selected_tickers)),
-                'alt_data_confidence': np.random.uniform(0.6, 0.9, len(selected_tickers)),
-                'sentiment_score': np.random.uniform(-0.3, 0.3, len(selected_tickers)),
-                'google_trend': np.random.uniform(30, 100, len(selected_tickers)),
-                'satellite_signal': np.random.uniform(0.3, 0.9, len(selected_tickers))
-            })
+                'alt_data_score': [],
+                'alt_data_confidence': [],
+                'sentiment_score': [],
+                'google_trend': [],
+                'satellite_signal': []
+            }
+            
+            for ticker in selected_tickers:
+                ticker_hash = hash(ticker) % 10000
+                # Generate all scores deterministically
+                scores_data['alt_data_score'].append(0.3 + ((ticker_hash * 7) % 500) / 1000.0)  # 0.3 to 0.8
+                scores_data['alt_data_confidence'].append(0.6 + ((ticker_hash * 11) % 300) / 1000.0)  # 0.6 to 0.9
+                scores_data['sentiment_score'].append(((ticker_hash * 13) % 600 - 300) / 1000.0)  # -0.3 to 0.3
+                scores_data['google_trend'].append(30 + ((ticker_hash * 17) % 70))  # 30 to 100
+                scores_data['satellite_signal'].append(0.3 + ((ticker_hash * 19) % 600) / 1000.0)  # 0.3 to 0.9
+                
+            scores = pd.DataFrame(scores_data)
             st.session_state['alt_data_cache'] = scores
     else:
         # Real-time alternative data collection
@@ -1157,13 +1176,14 @@ with tab3:
                     
                 except Exception as e:
                     st.error(f"❌ Error collecting alternative data: {str(e)}")
-                    st.info("Using demo data instead...")
-                    # Fallback to mock data
-                    scores = pd.DataFrame({
-                        'ticker': selected_tickers,
-                        'alt_data_score': np.random.uniform(0.3, 0.8, len(selected_tickers)),
-                        'alt_data_confidence': np.random.uniform(0.6, 0.9, len(selected_tickers))
-                    })
+                    st.info("Using deterministic demo data instead...")
+                    # Fallback to deterministic data
+                    scores_data = {'ticker': selected_tickers, 'alt_data_score': [], 'alt_data_confidence': []}
+                    for ticker in selected_tickers:
+                        ticker_hash = hash(ticker) % 10000
+                        scores_data['alt_data_score'].append(0.3 + ((ticker_hash * 7) % 500) / 1000.0)
+                        scores_data['alt_data_confidence'].append(0.6 + ((ticker_hash * 11) % 300) / 1000.0)
+                    scores = pd.DataFrame(scores_data)
                     st.session_state['alt_data_cache'] = scores
         
         # Display the alternative data

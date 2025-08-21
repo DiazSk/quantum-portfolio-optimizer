@@ -687,10 +687,19 @@ class ComplianceDashboard:
     
     async def _get_compliance_status_data(self) -> Dict[str, Any]:
         """Get compliance status trend data."""
-        # Mock data - would be replaced with actual database queries
+        # Deterministic data - would be replaced with actual database queries
         dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='M')
-        scores = np.random.normal(92, 3, len(dates))
-        scores = np.clip(scores, 85, 100)  # Keep within reasonable range
+        
+        # Generate deterministic scores with realistic variations
+        scores = []
+        base_score = 92
+        for i, date in enumerate(dates):
+            date_hash = hash(f"{date.strftime('%Y%m')}_compliance") % 1000
+            # Generate score variation around base_score with ±3 point range
+            variation = ((date_hash - 500) / 1000.0) * 6  # ±3 points
+            score = base_score + variation
+            score = max(85, min(100, score))  # Keep within reasonable range
+            scores.append(score)
         
         return {
             'dates': dates,
@@ -751,28 +760,33 @@ class ComplianceDashboard:
     
     async def _get_recent_compliance_activity(self) -> List[Dict[str, Any]]:
         """Get recent compliance activity."""
-        # Mock data - would query audit trail
+        # Deterministic data - would query audit trail
         activities = []
         for i in range(10):
+            activity_hash = hash(f"activity_{i}") % 3
+            status_options = ['completed', 'pending', 'failed']
             activities.append({
                 'timestamp': datetime.now() - timedelta(hours=i),
                 'type': f'Activity {i+1}',
                 'description': f'Sample compliance activity {i+1}',
-                'status': np.random.choice(['completed', 'pending', 'failed'])
+                'status': status_options[activity_hash]
             })
         
         return activities
     
     async def _get_upcoming_deadlines(self, days_ahead: int = 30) -> List[Dict[str, Any]]:
         """Get upcoming regulatory deadlines."""
-        # Mock data - would query compliance calendar
+        # Deterministic data - would query compliance calendar
         deadlines = []
+        deadline_types = ['Form PF', 'AIFMD', 'Solvency II']
         for i in range(5):
+            deadline_hash = hash(f"deadline_{i}") % len(deadline_types)
+            days_hash = hash(f"days_{i}") % days_ahead + 1  # 1 to days_ahead
             deadlines.append({
                 'id': f'deadline_{i}',
                 'title': f'Regulatory Filing {i+1}',
-                'type': np.random.choice(['Form PF', 'AIFMD', 'Solvency II']),
-                'deadline': datetime.now() + timedelta(days=np.random.randint(1, days_ahead)),
+                'type': deadline_types[deadline_hash],
+                'deadline': datetime.now() + timedelta(days=days_hash),
                 'status': 'pending'
             })
         

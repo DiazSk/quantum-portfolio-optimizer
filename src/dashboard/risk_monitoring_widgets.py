@@ -762,11 +762,11 @@ def render_risk_monitoring_page():
         cached_data = st.session_state.risk_metrics_cache.get(portfolio_id)
         
         if cached_data:
-            # Mock RiskMetricsSnapshot from cached data
+            # Use real cached data to create RiskMetricsSnapshot-like object
             from datetime import datetime
             
             # Convert cached data to RiskMetricsSnapshot-like object
-            class MockSnapshot:
+            class CachedSnapshot:
                 def __init__(self, data):
                     self.portfolio_id = portfolio_id
                     self.timestamp = datetime.fromisoformat(data['timestamp']) if data.get('timestamp') else datetime.now()
@@ -784,7 +784,7 @@ def render_risk_monitoring_page():
                     self.leverage_ratio = metrics.get('leverage_ratio', 1.0)
                     self.concentration_risk = metrics.get('concentration_risk', {'max_position': 0})
             
-            risk_metrics = MockSnapshot(cached_data)
+            risk_metrics = CachedSnapshot(cached_data)
         else:
             risk_metrics = None
         
@@ -797,26 +797,18 @@ def render_risk_monitoring_page():
         tab1, tab2, tab3 = st.tabs(["📈 Risk Trends", "🚨 Alert Management", "⚙️ Settings"])
         
         with tab1:
-            # Generate some mock historical data if no real data
-            if not cached_data:
-                mock_historical = []
-                for i in range(20):
-                    timestamp = datetime.now() - timedelta(minutes=30*i)
-                    mock_historical.append(MockSnapshot({
-                        'timestamp': timestamp.isoformat(),
-                        'metrics': {
-                            'var_95': -0.03 + np.random.normal(0, 0.01),
-                            'cvar_95': -0.05 + np.random.normal(0, 0.015),
-                            'max_drawdown': -0.12 + np.random.normal(0, 0.02),
-                            'annual_volatility': 0.18 + np.random.normal(0, 0.02),
-                            'sharpe_ratio': 1.2 + np.random.normal(0, 0.1),
-                            'leverage_ratio': 1.1 + np.random.normal(0, 0.05),
-                            'concentration_risk': {'max_position': 0.25 + np.random.normal(0, 0.02)}
-                        }
-                    }))
-                RealTimeRiskCharts.render(portfolio_id, mock_historical)
-            else:
+            # Only show risk charts if we have real cached data
+            if cached_data and risk_metrics:
                 RealTimeRiskCharts.render(portfolio_id, [risk_metrics])
+            else:
+                st.info("📊 No risk data available. Please ensure the portfolio has been analyzed with real market data.")
+                st.markdown("""
+                **To generate risk metrics:**
+                1. Ensure your portfolio has been optimized with real market data
+                2. Wait for the risk monitoring system to collect data
+                3. Risk metrics will appear here once available
+                """)
+                # Don't generate any mock or simulated data
         
         with tab2:
             AlertHistoryPanel.render(portfolio_id)

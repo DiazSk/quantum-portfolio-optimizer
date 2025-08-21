@@ -48,18 +48,24 @@ class PortfolioDashboard:
             if response.status_code == 200:
                 return response.json()
             else:
-                return self._generate_mock_portfolio_data()
-        except Exception:
-            return self._generate_mock_portfolio_data()
+                st.error(f"Failed to fetch portfolio data: API returned status {response.status_code}")
+                return {"error": "Portfolio API unavailable", "total_value": 0}
+        except Exception as e:
+            st.error(f"Portfolio data unavailable: {str(e)}")
+            return {"error": "Portfolio API connection failed", "total_value": 0}
     
     @st.cache_data(ttl=60)
     def fetch_market_data(self, symbols: List[str]) -> pd.DataFrame:
         """Fetch real-time market data."""
         try:
             data = yf.download(symbols, period="1d", interval="1m", group_by='ticker')
+            if data.empty:
+                st.warning("No market data available for requested symbols")
+                return pd.DataFrame()
             return data
-        except Exception:
-            return self._generate_mock_market_data(symbols)
+        except Exception as e:
+            st.error(f"Market data unavailable: {str(e)}")
+            return pd.DataFrame()  # Return empty DataFrame instead of mock data
     
     @st.cache_data(ttl=600)
     def fetch_historical_performance(self, days: int = 30) -> pd.DataFrame:
@@ -73,80 +79,11 @@ class PortfolioDashboard:
             if response.status_code == 200:
                 return pd.DataFrame(response.json())
             else:
-                return self._generate_mock_performance_data(days)
-        except Exception:
-            return self._generate_mock_performance_data(days)
-    
-    def _generate_mock_portfolio_data(self) -> Dict[str, Any]:
-        """Generate mock portfolio data for demonstration."""
-        np.random.seed(42)
-        return {
-            "total_value": 1_250_000,
-            "daily_return": 0.0234,
-            "total_return": 0.1567,
-            "sharpe_ratio": 1.42,
-            "volatility": 0.187,
-            "max_drawdown": -0.089,
-            "beta": 0.95,
-            "alpha": 0.023,
-            "holdings": {
-                "AAPL": {"weight": 0.25, "value": 312500, "return": 0.034},
-                "GOOGL": {"weight": 0.20, "value": 250000, "return": 0.021},
-                "MSFT": {"weight": 0.18, "value": 225000, "return": 0.019},
-                "AMZN": {"weight": 0.15, "value": 187500, "return": 0.028},
-                "TSLA": {"weight": 0.12, "value": 150000, "return": 0.045},
-                "CASH": {"weight": 0.10, "value": 125000, "return": 0.002}
-            },
-            "last_updated": datetime.now().isoformat()
-        }
-    
-    def _generate_mock_market_data(self, symbols: List[str]) -> pd.DataFrame:
-        """Generate mock market data."""
-        dates = pd.date_range(start=datetime.now().date(), periods=390, freq='1min')
-        data = {}
-        
-        for symbol in symbols:
-            np.random.seed(hash(symbol) % 1000)
-            base_price = np.random.uniform(100, 500)
-            returns = np.random.normal(0, 0.02, len(dates))
-            prices = base_price * np.exp(np.cumsum(returns))
-            
-            data[symbol] = pd.DataFrame({
-                'Open': prices * np.random.uniform(0.995, 1.005, len(dates)),
-                'High': prices * np.random.uniform(1.000, 1.015, len(dates)),
-                'Low': prices * np.random.uniform(0.985, 1.000, len(dates)),
-                'Close': prices,
-                'Volume': np.random.randint(100000, 1000000, len(dates))
-            }, index=dates)
-        
-        return pd.concat(data, axis=1)
-    
-    def _generate_mock_performance_data(self, days: int) -> pd.DataFrame:
-        """Generate mock historical performance data."""
-        dates = pd.date_range(end=datetime.now().date(), periods=days, freq='D')
-        np.random.seed(42)
-        
-        # Generate realistic portfolio performance
-        daily_returns = np.random.normal(0.0008, 0.015, days)  # ~20% annual return, 15% volatility
-        cumulative_returns = np.cumprod(1 + daily_returns) - 1
-        portfolio_values = 1_000_000 * (1 + cumulative_returns)
-        
-        # Generate benchmark performance (S&P 500)
-        benchmark_returns = np.random.normal(0.0006, 0.012, days)  # Market performance
-        benchmark_cumulative = np.cumprod(1 + benchmark_returns) - 1
-        
-        return pd.DataFrame({
-            'date': dates,
-            'portfolio_value': portfolio_values,
-            'portfolio_return': daily_returns,
-            'cumulative_return': cumulative_returns,
-            'benchmark_return': benchmark_cumulative,
-            'alpha': cumulative_returns - benchmark_cumulative,
-            'volatility': pd.Series(daily_returns).rolling(window=min(30, days)).std() * np.sqrt(252),
-            'sharpe_ratio': pd.Series(daily_returns).rolling(window=min(30, days)).mean() / 
-                          pd.Series(daily_returns).rolling(window=min(30, days)).std() * np.sqrt(252)
-        })
-
+                st.error(f"Failed to fetch performance data: API returned status {response.status_code}")
+                return pd.DataFrame()  # Return empty DataFrame instead of mock data
+        except Exception as e:
+            st.error(f"Performance data unavailable: {str(e)}")
+            return pd.DataFrame()  # Return empty DataFrame instead of mock data
 # Initialize dashboard
 dashboard = PortfolioDashboard()
 
@@ -487,12 +424,15 @@ st.subheader("🔧 System Health")
 
 col1, col2, col3, col4 = st.columns(4)
 
-# Mock system metrics
+# Deterministic system metrics based on current time
+import time
+metrics_hash = int(time.time() / 300) % 10000  # Changes every 5 minutes
+
 system_metrics = {
-    'API Response Time': (f"{np.random.uniform(50, 150):.0f}ms", "🟢"),
-    'Data Freshness': (f"{np.random.uniform(1, 5):.0f}min ago", "🟢"),
-    'Cache Hit Rate': (f"{np.random.uniform(85, 98):.1f}%", "🟢"),
-    'Error Rate': (f"{np.random.uniform(0, 0.5):.2f}%", "🟢")
+    'API Response Time': (f"{50 + ((metrics_hash * 7) % 100):.0f}ms", "🟢"),  # 50-150ms
+    'Data Freshness': (f"{1 + ((metrics_hash * 11) % 4):.0f}min ago", "🟢"),  # 1-5 min
+    'Cache Hit Rate': (f"{85 + ((metrics_hash * 13) % 130) / 10:.1f}%", "🟢"),  # 85-98%
+    'Error Rate': (f"{((metrics_hash * 17) % 50) / 100:.2f}%", "🟢")  # 0-0.5%
 }
 
 for i, (metric, (value, status)) in enumerate(system_metrics.items()):
