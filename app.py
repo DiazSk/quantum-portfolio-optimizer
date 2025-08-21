@@ -116,6 +116,19 @@ try:
         </div>
         """, unsafe_allow_html=True)
     
+    # Add top navigation toggles
+    st.markdown("---")
+    
+    # Main navigation - Three primary modes
+    nav_option = st.radio(
+        "🎯 **Navigation Mode**",
+        ["🚀 Unified Dashboard", "📊 Analytics Hub", "💼 Portfolio Manager"],
+        horizontal=True,
+        help="Choose your preferred interface for accessing platform features"
+    )
+    
+    st.markdown("---")
+    
     # Add professional notice for recruiters with demo scenarios
     if demo_available:
         featured = PROFESSIONAL_DEMO_DATA["featured_portfolios"]
@@ -386,18 +399,78 @@ except Exception as e:
     **Full source code and advanced features available on GitHub!**
     """)
 
-# Run the unified dashboard with real API data
+# Run the appropriate interface based on navigation selection
 if 'dashboard_available' in locals() and dashboard_available:
     try:
         dashboard = UnifiedDashboard()
-        dashboard.render_main_dashboard()
+        
+        # Handle different navigation modes
+        if nav_option == "🚀 Unified Dashboard":
+            # Full unified dashboard with all features
+            dashboard.render_main_dashboard()
+            
+        elif nav_option == "📊 Analytics Hub":
+            # Focus on analytics and insights
+            st.title("📊 Analytics Hub")
+            st.markdown("---")
+            
+            # Analytics-focused tabs
+            analytics_tab1, analytics_tab2, analytics_tab3 = st.tabs([
+                "📈 Market Analytics",
+                "🔬 Advanced Analytics", 
+                "🤖 AI Insights"
+            ])
+            
+            with analytics_tab1:
+                dashboard._render_market_data()
+            
+            with analytics_tab2:
+                dashboard._render_advanced_analytics()
+                
+            with analytics_tab3:
+                dashboard._render_ai_insights()
+                
+        elif nav_option == "💼 Portfolio Manager":
+            # Focus on portfolio management
+            st.title("💼 Portfolio Manager")
+            st.markdown("---")
+            
+            # Portfolio-focused tabs  
+            portfolio_tab1, portfolio_tab2, portfolio_tab3, portfolio_tab4 = st.tabs([
+                "📈 Portfolio Overview",
+                "⚖️ Risk Analytics",
+                "💰 Sales Pipeline",
+                "📋 Reports"
+            ])
+            
+            with portfolio_tab1:
+                dashboard._render_portfolio_overview()
+                
+            with portfolio_tab2:
+                dashboard._render_risk_analytics()
+                
+            with portfolio_tab3:
+                dashboard._render_sales_pipeline()
+                
+            with portfolio_tab4:
+                dashboard._render_reports()
+                
     except Exception as e:
         st.error(f"Dashboard initialization error: {e}")
         st.info("The platform is operational but some advanced features may require API configuration.")
 else:
-    # Fallback demo when dashboard import fails
+    # Fallback demo when dashboard import fails - also add navigation
+    if 'nav_option' not in locals():
+        nav_option = st.radio(
+            "🎯 **Navigation Mode**",
+            ["🚀 Unified Dashboard", "📊 Analytics Hub", "💼 Portfolio Manager"],
+            horizontal=True,
+            help="Choose your preferred interface for accessing platform features"
+        )
+        st.markdown("---")
+    
     st.markdown("---")
-    st.subheader("🚀 Professional Portfolio Management Platform")
+    st.subheader("🚀 Professional Portfolio Management Platform (Demo Mode)")
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
