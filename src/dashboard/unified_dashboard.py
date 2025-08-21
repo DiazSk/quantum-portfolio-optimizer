@@ -650,7 +650,15 @@ class UnifiedDashboard:
         col1, col2 = st.columns(2)
         
         with col1:
-            self._render_portfolio_allocation()
+            st.subheader("📊 Quick Portfolio Stats")
+            # Display key portfolio statistics instead of duplicate allocation chart
+            stats_data = {
+                'Metric': ['Number of Holdings', 'Largest Position', 'Sector Concentration', 'Geographic Focus'],
+                'Value': ['6 Assets', '25% (AAPL)', 'Technology 70%', 'US Markets 85%']
+            }
+            import pandas as pd
+            stats_df = pd.DataFrame(stats_data)
+            st.dataframe(stats_df, use_container_width=True, hide_index=True)
         
         with col2:
             self._render_performance_chart_old(portfolio_data)
