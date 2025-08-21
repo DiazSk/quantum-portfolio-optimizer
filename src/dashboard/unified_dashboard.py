@@ -410,7 +410,7 @@ class UnifiedDashboard:
                 Enterprise Portfolio Management Platform
             </h3>
             <p style="color: #f1faee; text-align: center; margin: 0;">
-                Live API Integration • Professional Grade • Summer 2026 Applications Ready
+                Live API Integration • Professional Grade
             </p>
         </div>
         """, unsafe_allow_html=True)
