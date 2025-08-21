@@ -671,9 +671,9 @@ class UnifiedDashboard:
     def _get_real_sales_data(self) -> Dict:
         """Get real sales data from CRM - NO MOCK DATA"""
         try:
-            # Get actual sales data from CRM system
+            # Get actual sales data from CRM system using correct method
             if self.crm:
-                return self.crm.get_pipeline_summary()
+                return self.crm.get_pipeline_report()
             else:
                 return {}
         except Exception as e:
