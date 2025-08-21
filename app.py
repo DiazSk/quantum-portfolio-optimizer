@@ -4,6 +4,8 @@ Professional Portfolio Management Platform
 
 LIVE DEMO for Fall 2025 Job Applications
 Enterprise-grade portfolio optimization with ML and AI insights
+
+DEPLOYMENT STATUS: ✅ FIXED - Removed invalid 'calendar' dependency
 """
 
 import streamlit as st
