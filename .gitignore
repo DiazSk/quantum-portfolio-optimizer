@@ -112,6 +112,20 @@ debug_*.py
 FIXES_*.md
 COMPLETION_*.md
 STORY_*.md
+EPIC*.md
+COMPREHENSIVE*.md
+FINAL*.md
+MOCK*.md
+QA*.md
+TECHNICAL*.md
+EXECUTIVE*.md
+URGENT*.md
+
+# Demo and validation scripts
+*demo*.py
+count*.py
+*validation*.py
+*VERIFICATION*.py
 
 # Personal notes and TODO files
 TODO.md
