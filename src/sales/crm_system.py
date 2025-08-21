@@ -34,9 +34,9 @@ import sys
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, project_root)
 
-from src.utils.professional_logging import get_logger
-
-logger = get_logger(__name__)
+# Use standard logging as fallback
+import logging
+logger = logging.getLogger(__name__)
 
 class SalesStage(Enum):
     """7-stage institutional sales pipeline"""
