@@ -29,6 +29,10 @@ uvicorn
 streamlit
 plotly
 websockets
+pyjwt  # JWT token handling for authentication
+python-multipart  # Form data handling for FastAPI
+passlib[bcrypt]  # Password hashing for authentication
+email-validator  # Email validation for Pydantic
 
 # Database
 sqlalchemy
@@ -45,6 +49,9 @@ tqdm
 
 # Logging (CRITICAL - Missing dependency identified by Quinn)
 structlog
+
+# Statistical Analysis (Story 2.2)
+statsmodels
 
 # Real-time Risk Monitoring Dependencies
 jinja2>=3.1.0

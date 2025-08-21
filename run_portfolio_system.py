@@ -45,17 +45,59 @@ def run_complete_pipeline():
     print(f"📊 Investment Universe: {', '.join(tickers)}")
     print("-" * 60)
     
-    # ========== STEP 1: Alternative Data Collection (Mock) ==========
+    # ========== STEP 1: Alternative Data Collection (Real APIs) ==========
     print("\n📡 STEP 1: Collecting Alternative Data...")
     print("-" * 40)
     
-    alt_data_scores = pd.DataFrame({
-        'ticker': tickers,
-        'alt_data_score': np.random.uniform(0.3, 0.8, len(tickers)),
-        'sentiment_score': np.random.uniform(-0.3, 0.3, len(tickers)),
-        'google_trend': np.random.uniform(40, 80, len(tickers)),
-        'satellite_signal': np.random.uniform(0.4, 0.9, len(tickers))
-    })
+    # Import real alternative data collector
+    from src.data.alternative_data_collector import AlternativeDataCollector
+    
+    # Initialize collector with real API keys from .env
+    alt_collector = AlternativeDataCollector(tickers)
+    
+    # Collect real alternative data for all tickers
+    print("🔍 Collecting real alternative data from multiple sources...")
+    try:
+        # Use asyncio to run the async method
+        import asyncio
+        alt_data_raw = asyncio.run(alt_collector.collect_all_alternative_data())
+        
+        # Process the raw data into the expected format
+        # Calculate real composite alternative data score from multiple sources
+        sentiment_scores = alt_data_raw.get('reddit_sentiment', [0.0] * len(alt_data_raw))
+        google_trends = alt_data_raw.get('google_search_volume', [50.0] * len(alt_data_raw))
+        satellite_signals = alt_data_raw.get('satellite_retail_activity', [0.5] * len(alt_data_raw))
+        
+        # Real composite scoring algorithm (weighted average of normalized signals)
+        composite_scores = []
+        for i in range(len(alt_data_raw)):
+            # Normalize each signal to 0-1 range
+            norm_sentiment = (sentiment_scores[i] + 1.0) / 2.0  # -1 to 1 → 0 to 1
+            norm_google = google_trends[i] / 100.0  # 0 to 100 → 0 to 1
+            norm_satellite = satellite_signals[i]  # Already 0 to 1
+            
+            # Weighted composite score (sentiment: 40%, google: 30%, satellite: 30%)
+            composite_score = (0.4 * norm_sentiment + 0.3 * norm_google + 0.3 * norm_satellite)
+            composite_scores.append(composite_score)
+        
+        alt_data_scores = pd.DataFrame({
+            'ticker': alt_data_raw['ticker'],
+            'alt_data_score': composite_scores,  # Real calculated composite score
+            'sentiment_score': sentiment_scores,
+            'google_trend': google_trends,
+            'satellite_signal': satellite_signals
+        })
+        print(f"✅ Successfully collected alternative data for {len(alt_data_scores)} securities")
+        
+    except Exception as e:
+        print(f"⚠️  Warning: Alternative data collection failed ({e}), using neutral fallback")
+        alt_data_scores = pd.DataFrame({
+            'ticker': tickers,
+            'alt_data_score': [0.5] * len(tickers),  # Neutral baseline
+            'sentiment_score': [0.0] * len(tickers),  # Neutral sentiment
+            'google_trend': [50.0] * len(tickers),   # Baseline trend
+            'satellite_signal': [0.5] * len(tickers)  # Baseline signal
+        })
     
     print("\n🎯 Alternative Data Scores:")
     print(alt_data_scores.sort_values('alt_data_score', ascending=False).to_string(index=False))
@@ -105,16 +147,66 @@ def run_complete_pipeline():
     print("\n🌡️ STEP 3: Detecting Market Regime...")
     print("-" * 40)
     
-    regimes = ['bull_market', 'neutral', 'high_volatility']
-    detected_regime = np.random.choice(regimes)
-    regime_confidence = np.random.uniform(0.7, 0.95)
-    
-    if detected_regime and isinstance(detected_regime, str):
+    # Real regime detection based on actual market data
+    try:
+        # Import real regime detection module
+        from src.models.regime_detection import RegimeDetector
+        
+        # Initialize regime detector with market data
+        regime_detector = RegimeDetector()
+        
+        # Detect current market regime based on VIX, yield curve, and market momentum
+        regime_result = regime_detector.detect_current_regime()
+        detected_regime = regime_result['regime']
+        regime_confidence = regime_result['confidence']
+        
         print(f"  Detected Regime: {detected_regime.upper()}")
-    else:
+        print(f"  Confidence: {regime_confidence:.1%}")
+        print(f"  Key Indicators: VIX={regime_result.get('vix', 'N/A')}, Yield Spread={regime_result.get('yield_spread', 'N/A')}")
+        
+    except ImportError:
+        # Fallback: Simple VIX-based regime detection using real market data
+        print("  Using VIX-based regime detection...")
+        try:
+            import yfinance as yf
+            vix_data = yf.download("^VIX", period="5d", interval="1d")
+            
+            if not vix_data.empty:
+                current_vix = vix_data['Close'].iloc[-1]
+                
+                # Real regime classification based on VIX levels
+                if current_vix < 15:
+                    detected_regime = "bull_market"
+                    regime_confidence = 0.85
+                elif current_vix < 25:
+                    detected_regime = "neutral"
+                    regime_confidence = 0.75
+                else:
+                    detected_regime = "high_volatility"
+                    regime_confidence = 0.90
+                    
+                print(f"  Detected Regime: {detected_regime.upper()} (VIX: {current_vix:.1f})")
+                print(f"  Confidence: {regime_confidence:.1%}")
+            else:
+                # Conservative fallback when no data available
+                detected_regime = "neutral"
+                regime_confidence = 0.50
+                print(f"  Detected Regime: NEUTRAL (default - no VIX data)")
+                print(f"  Confidence: {regime_confidence:.1%}")
+                
+        except Exception as e:
+            # Conservative fallback
+            detected_regime = "neutral"
+            regime_confidence = 0.50
+            print(f"  Detected Regime: NEUTRAL (default - data unavailable)")
+            print(f"  Confidence: {regime_confidence:.1%}")
+    
+    except Exception as e:
+        # Conservative fallback for any other errors
         detected_regime = "neutral"
-        print(f"  Detected Regime: NEUTRAL (default)")
-    print(f"  Confidence: {regime_confidence:.1%}")
+        regime_confidence = 0.50
+        print(f"  Detected Regime: NEUTRAL (default - regime detection failed)")
+        print(f"  Confidence: {regime_confidence:.1%}")
     
     # ========== STEP 4: Save Results ==========
     print("\n📄 STEP 4: Generating Reports...")
