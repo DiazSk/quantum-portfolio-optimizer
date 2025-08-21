@@ -74,19 +74,51 @@ try:
     from src.portfolio.portfolio_optimizer import PortfolioOptimizer
     from src.sales.crm_system import InstitutionalCRM
     from src.database.connection_manager import DatabaseManager
-    
-    # Import additional dashboard components
-    from src.dashboard.services.alert_system import AlertSystem, AlertSeverity
-    from src.dashboard.services.portfolio_service import PortfolioDataService
-    from src.dashboard.pages.analytics import AnalyticsService
-    from src.risk.realtime_monitor import RealTimeRiskMonitor
-    from src.monitoring.enterprise_monitoring import EnterpriseMonitoring
-    
-    APIS_AVAILABLE = True
+    CORE_APIS_AVAILABLE = True
 except ImportError as e:
-    APIS_AVAILABLE = False
-    st.error(f"❌ Required APIs not available: {e}")
-    st.stop()
+    CORE_APIS_AVAILABLE = False
+    logger.warning(f"⚠️ Core APIs not available: {e}")
+
+# Import additional dashboard components - with graceful fallbacks
+try:
+    from src.dashboard.services.alert_system import RealTimeAlertSystem, AlertSeverity
+    ALERT_SYSTEM_AVAILABLE = True
+except ImportError:
+    ALERT_SYSTEM_AVAILABLE = False
+    logger.warning("Alert system not available")
+
+try:
+    from src.dashboard.services.portfolio_service import PortfolioDataService
+    PORTFOLIO_SERVICE_AVAILABLE = True
+except ImportError:
+    PORTFOLIO_SERVICE_AVAILABLE = False
+    logger.warning("Portfolio service not available")
+
+try:
+    from src.dashboard.pages.analytics import AnalyticsService
+    ANALYTICS_SERVICE_AVAILABLE = True
+except ImportError:
+    ANALYTICS_SERVICE_AVAILABLE = False
+    logger.warning("Analytics service not available")
+
+try:
+    from src.risk.realtime_monitor import RealTimeRiskMonitor
+    RISK_MONITOR_AVAILABLE = True
+except ImportError:
+    RISK_MONITOR_AVAILABLE = False
+    logger.warning("Risk monitor not available")
+
+try:
+    from src.monitoring.enterprise_monitoring import EnterpriseMonitoring
+    ENTERPRISE_MONITORING_AVAILABLE = True
+except ImportError:
+    ENTERPRISE_MONITORING_AVAILABLE = False
+    logger.warning("Enterprise monitoring not available")
+
+# Only stop if core APIs are completely unavailable
+if not CORE_APIS_AVAILABLE:
+    st.error("❌ Core APIs not available - basic functionality may be limited")
+    # Don't stop - allow basic dashboard to load
 
 @dataclass
 class DashboardConfig:
@@ -149,60 +181,87 @@ class UnifiedDashboard:
         
         # Initialize core API connections
         try:
-            self.data_collector = AlternativeDataCollector(self.config.default_tickers)
+            if CORE_APIS_AVAILABLE:
+                self.data_collector = AlternativeDataCollector(self.config.default_tickers)
+            else:
+                self.data_collector = None
         except Exception as e:
             logger.error(f"Failed to initialize data collector: {e}")
             self.data_collector = None
         
         try:
-            self.portfolio_optimizer = PortfolioOptimizer(
-                tickers=self.config.default_tickers,
-                lookback_years=2,
-                risk_free_rate=0.04
-            )
+            if CORE_APIS_AVAILABLE:
+                self.portfolio_optimizer = PortfolioOptimizer(
+                    tickers=self.config.default_tickers,
+                    lookback_years=2,
+                    risk_free_rate=0.04
+                )
+            else:
+                self.portfolio_optimizer = None
         except Exception as e:
             logger.error(f"Failed to initialize portfolio optimizer: {e}")
             self.portfolio_optimizer = None
         
         try:
-            self.crm = InstitutionalCRM(database_url="sqlite:///institutional_crm.db")
+            if CORE_APIS_AVAILABLE:
+                self.crm = InstitutionalCRM(database_url="sqlite:///institutional_crm.db")
+            else:
+                self.crm = None
         except Exception as e:
             logger.error(f"Failed to initialize CRM: {e}")
             self.crm = None
         
         try:
-            self.db_manager = DatabaseManager()
+            if CORE_APIS_AVAILABLE:
+                self.db_manager = DatabaseManager()
+            else:
+                self.db_manager = None
         except Exception as e:
             logger.error(f"Failed to initialize database manager: {e}")
             self.db_manager = None
         
-        # Initialize additional integrated systems
+        # Initialize additional integrated systems with availability checks
         try:
-            self.alert_system = AlertSystem()
+            if ALERT_SYSTEM_AVAILABLE:
+                self.alert_system = RealTimeAlertSystem()
+            else:
+                self.alert_system = None
         except Exception as e:
             logger.error(f"Failed to initialize alert system: {e}")
             self.alert_system = None
         
         try:
-            self.portfolio_service = PortfolioDataService()
+            if PORTFOLIO_SERVICE_AVAILABLE:
+                self.portfolio_service = PortfolioDataService()
+            else:
+                self.portfolio_service = None
         except Exception as e:
             logger.error(f"Failed to initialize portfolio service: {e}")
             self.portfolio_service = None
         
         try:
-            self.analytics_service = AnalyticsService()
+            if ANALYTICS_SERVICE_AVAILABLE:
+                self.analytics_service = AnalyticsService()
+            else:
+                self.analytics_service = None
         except Exception as e:
             logger.error(f"Failed to initialize analytics service: {e}")
             self.analytics_service = None
         
         try:
-            self.risk_monitor = RealTimeRiskMonitor()
+            if RISK_MONITOR_AVAILABLE:
+                self.risk_monitor = RealTimeRiskMonitor()
+            else:
+                self.risk_monitor = None
         except Exception as e:
             logger.error(f"Failed to initialize risk monitor: {e}")
             self.risk_monitor = None
         
         try:
-            self.enterprise_monitoring = EnterpriseMonitoring()
+            if ENTERPRISE_MONITORING_AVAILABLE:
+                self.enterprise_monitoring = EnterpriseMonitoring()
+            else:
+                self.enterprise_monitoring = None
         except Exception as e:
             logger.error(f"Failed to initialize enterprise monitoring: {e}")
             self.enterprise_monitoring = None
