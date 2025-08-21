@@ -273,7 +273,7 @@ class UnifiedDashboard:
         self._initialize_session_state()
     
     def _verify_api_configuration(self):
-        """Verify required API keys are configured"""
+        """Verify required API keys are configured - with graceful fallback"""
         required_apis = [
             'ALPHA_VANTAGE_API_KEY',
             'NEWS_API_KEY', 
@@ -287,30 +287,38 @@ class UnifiedDashboard:
                 missing_apis.append(api)
         
         if missing_apis:
-            st.error(f"❌ Missing API keys: {', '.join(missing_apis)}")
-            st.error("🔧 **Streamlit Cloud Configuration Required:**")
-            st.info("""
-            **To fix this deployment issue:**
+            st.warning(f"⚠️ Missing API keys: {', '.join(missing_apis)}")
             
-            1. **Go to your Streamlit Cloud dashboard**
-            2. **Click on your app → Settings → Secrets**
-            3. **Add these API keys:**
-            ```
-            ALPHA_VANTAGE_API_KEY = "your_actual_key"
-            NEWS_API_KEY = "your_actual_key"
-            FMP_API_KEY = "your_actual_key"
-            REDDIT_CLIENT_ID = "your_actual_key"
-            REDDIT_CLIENT_SECRET = "your_actual_key"
-            ```
-            4. **Save and redeploy**
+            with st.expander("🔧 **API Configuration Instructions**", expanded=False):
+                st.info("""
+                **To enable full functionality:**
+                
+                1. **Go to your Streamlit Cloud dashboard**
+                2. **Click on your app → Settings → Secrets**
+                3. **Add these API keys:**
+                ```
+                ALPHA_VANTAGE_API_KEY = "your_actual_key"
+                NEWS_API_KEY = "your_actual_key"
+                FMP_API_KEY = "your_actual_key"
+                REDDIT_CLIENT_ID = "your_actual_key"
+                REDDIT_CLIENT_SECRET = "your_actual_key"
+                ```
+                4. **Save and redeploy**
+                
+                **Get free API keys from:**
+                - Alpha Vantage: https://www.alphavantage.co/support/#api-key
+                - News API: https://newsapi.org/register
+                - Financial Modeling Prep: https://financialmodelingprep.com/developer/docs
+                - Reddit: https://www.reddit.com/prefs/apps
+                
+                **Note:** Basic functionality works without API keys using Yahoo Finance data.
+                """)
             
-            **Get free API keys from:**
-            - Alpha Vantage: https://www.alphavantage.co/support/#api-key
-            - News API: https://newsapi.org/register
-            - Financial Modeling Prep: https://financialmodelingprep.com/developer/docs
-            - Reddit: https://www.reddit.com/prefs/apps
-            """)
-            st.stop()
+            # Don't stop - allow dashboard to continue with limited functionality
+            logger.warning(f"Dashboard running with limited functionality - missing APIs: {missing_apis}")
+        else:
+            st.success("✅ All API keys configured!")
+            logger.info("All required API keys are configured")
     
     def _initialize_session_state(self):
         """Initialize Streamlit session state"""
@@ -514,7 +522,9 @@ class UnifiedDashboard:
         portfolio_data = self._get_real_portfolio_data()
         
         if not portfolio_data:
-            st.error("❌ No portfolio data available. Please check API connections.")
+            st.warning("⚠️ Limited portfolio data available - using demo metrics")
+            # Show demo dashboard instead of error
+            self._render_demo_portfolio_overview()
             return
         
         # Portfolio metrics row
@@ -562,6 +572,60 @@ class UnifiedDashboard:
         # Holdings table
         self._render_holdings_table(portfolio_data)
     
+    def _render_demo_portfolio_overview(self):
+        """Render demo portfolio overview when real data unavailable"""
+        st.info("📊 **Demo Portfolio Dashboard** - Configure API keys for live data")
+        
+        # Demo metrics
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Portfolio Value", "$1,250,000", delta="+2.4%")
+        
+        with col2:
+            st.metric("Total Return", "+15.2%", delta="vs S&P 500")
+        
+        with col3:
+            st.metric("Sharpe Ratio", "1.85", delta="Beta: 0.92")
+        
+        with col4:
+            st.metric("Volatility", "12.3%", delta="Max DD: -8.1%")
+        
+        # Demo charts
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Portfolio Allocation")
+            demo_allocation = {
+                'Asset': ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA'],
+                'Weight': [25, 22, 20, 18, 15]
+            }
+            fig = px.pie(demo_allocation, values='Weight', names='Asset', 
+                        title="Demo Portfolio Allocation")
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            st.subheader("Performance Chart")
+            dates = pd.date_range('2024-01-01', periods=30, freq='D')
+            performance = np.cumsum(np.random.normal(0.001, 0.02, 30))
+            demo_perf = pd.DataFrame({'Date': dates, 'Returns': performance})
+            
+            fig = px.line(demo_perf, x='Date', y='Returns', 
+                         title="Demo Portfolio Performance")
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Demo holdings
+        st.subheader("Demo Holdings")
+        demo_holdings = {
+            'Symbol': ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA'],
+            'Shares': [500, 400, 300, 200, 100],
+            'Price': ['$175.25', '$420.15', '$2,850.75', '$3,125.50', '$890.25'],
+            'Value': ['$87,625', '$168,060', '$855,225', '$625,100', '$89,025'],
+            'P&L': ['+$12,500', '+$25,000', '+$45,000', '+$15,000', '-$5,000']
+        }
+        df_demo = pd.DataFrame(demo_holdings)
+        st.dataframe(df_demo, use_container_width=True)
+    
     def _render_risk_analytics(self):
         """Render risk analytics dashboard"""
         st.title("⚖️ Risk Analytics")
@@ -598,7 +662,8 @@ class UnifiedDashboard:
         market_data = self._get_real_market_data()
         
         if market_data.empty:
-            st.error("❌ No market data available. Please check API connections.")
+            st.warning("⚠️ Limited market data available - using demo data")
+            self._render_demo_market_data()
             return
         
         # Market overview
@@ -609,6 +674,51 @@ class UnifiedDashboard:
         
         # Market sentiment
         self._render_market_sentiment()
+    
+    def _render_demo_market_data(self):
+        """Render demo market data when real data unavailable"""
+        st.info("📈 **Demo Market Data** - Configure API keys for real-time data")
+        
+        # Demo market overview
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("S&P 500", "4,125.50", delta="+0.8%")
+        
+        with col2:
+            st.metric("NASDAQ", "12,850.25", delta="+1.2%")
+        
+        with col3:
+            st.metric("VIX", "18.5", delta="-0.5")
+        
+        with col4:
+            st.metric("10Y Treasury", "4.25%", delta="+0.05%")
+        
+        # Demo market chart
+        st.subheader("Market Performance")
+        dates = pd.date_range('2024-01-01', periods=30, freq='D')
+        demo_market = pd.DataFrame({
+            'Date': dates,
+            'S&P 500': 4000 + np.cumsum(np.random.normal(2, 20, 30)),
+            'NASDAQ': 12000 + np.cumsum(np.random.normal(3, 35, 30)),
+            'DOW': 35000 + np.cumsum(np.random.normal(1, 15, 30))
+        })
+        
+        fig = px.line(demo_market, x='Date', y=['S&P 500', 'NASDAQ', 'DOW'],
+                     title="Demo Market Indices Performance")
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Demo market sentiment
+        st.subheader("Market Sentiment")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.metric("Fear & Greed Index", "65", delta="Greed")
+            st.metric("Put/Call Ratio", "0.85", delta="Bullish")
+        
+        with col2:
+            st.metric("News Sentiment", "72%", delta="Positive")
+            st.metric("Social Sentiment", "68%", delta="Optimistic")
     
     def _render_sales_pipeline(self):
         """Render sales pipeline dashboard"""
