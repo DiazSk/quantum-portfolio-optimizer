@@ -399,21 +399,21 @@ class UnifiedDashboard:
         elif selected_tab == "📋 Reports":
             self._render_reports()
     
-    def _render_header(self):
-        """Render dashboard header"""
-        st.markdown("""
-        <div style="background: linear-gradient(90deg, #1f4e79, #2e86ab); padding: 2rem; border-radius: 10px; margin-bottom: 2rem;">
-            <h1 style="color: white; text-align: center; margin: 0;">
-                🚀 Quantum Portfolio Optimizer
-            </h1>
-            <h3 style="color: #a8dadc; text-align: center; margin: 0.5rem 0;">
-                Enterprise Portfolio Management Platform
-            </h3>
-            <p style="color: #f1faee; text-align: center; margin: 0;">
-                Live API Integration • Professional Grade • Summer 2026 Applications Ready
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+    # def _render_header(self):
+    #     """Render dashboard header"""
+    #     st.markdown("""
+    #     <div style="background: linear-gradient(90deg, #1f4e79, #2e86ab); padding: 2rem; border-radius: 10px; margin-bottom: 2rem;">
+    #         <h1 style="color: white; text-align: center; margin: 0;">
+    #             🚀 Quantum Portfolio Optimizer
+    #         </h1>
+    #         <h3 style="color: #a8dadc; text-align: center; margin: 0.5rem 0;">
+    #             Enterprise Portfolio Management Platform
+    #         </h3>
+    #         <p style="color: #f1faee; text-align: center; margin: 0;">
+    #             Live API Integration • Professional Grade • Summer 2026 Applications Ready
+    #         </p>
+    #     </div>
+    #     """, unsafe_allow_html=True)
     
     def _render_sidebar(self) -> str:
         """Render sidebar navigation and return selected tab"""
@@ -650,10 +650,10 @@ class UnifiedDashboard:
         col1, col2 = st.columns(2)
         
         with col1:
-            self._render_portfolio_allocation(portfolio_data)
+            self._render_portfolio_allocation()
         
         with col2:
-            self._render_performance_chart(portfolio_data)
+            self._render_performance_chart_old(portfolio_data)
         
         # Holdings table
         self._render_holdings_table(portfolio_data)
@@ -1509,16 +1509,8 @@ class UnifiedDashboard:
         return abs(float(np.min(drawdown)))
     
     # Rendering methods would be implemented here...
-    def _render_portfolio_allocation(self, portfolio_data: Dict):
-        """Render portfolio allocation chart"""
-        st.subheader("Portfolio Allocation")
-        if portfolio_data:
-            st.info("Portfolio allocation chart would be rendered here with real data")
-        else:
-            st.error("No portfolio data available")
-    
-    def _render_performance_chart(self, portfolio_data: Dict):
-        """Render performance chart"""
+    def _render_performance_chart_old(self, portfolio_data: Dict):
+        """Render performance chart (legacy)"""
         st.subheader("Performance Chart")
         if portfolio_data:
             st.info("Performance chart would be rendered here with real data")
