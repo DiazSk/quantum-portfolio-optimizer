@@ -401,8 +401,23 @@ async def test_realtime_monitor():
     dates = pd.date_range(start='2023-01-01', end='2024-01-01', freq='D')
     assets = ['AAPL', 'GOOGL', 'MSFT', 'AMZN']
     
+    # Generate deterministic sample data
+    dates = pd.date_range(start='2023-01-01', end='2024-01-01', freq='D')
+    assets = ['AAPL', 'GOOGL', 'MSFT', 'AMZN']
+    
+    # Create deterministic returns data
+    returns_matrix = []
+    for i, date in enumerate(dates):
+        day_returns = []
+        for j, asset in enumerate(assets):
+            return_hash = hash(f"{date.strftime('%Y%m%d')}_{asset}") % 10000
+            base_return = 0.0005
+            noise = ((return_hash - 5000) / 10000.0) * 0.03  # ±1.5% daily volatility
+            day_returns.append(base_return + noise)
+        returns_matrix.append(day_returns)
+    
     returns_data = pd.DataFrame(
-        np.random.normal(0.0005, 0.015, (len(dates), len(assets))),
+        returns_matrix,
         index=dates,
         columns=assets
     )

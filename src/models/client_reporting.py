@@ -329,10 +329,27 @@ class ClientReportDataProcessor:
     async def _get_benchmark_return_series(self, ticker: str, start_date: date, end_date: date) -> List[float]:
         """Get benchmark daily return series."""
         # Placeholder - would integrate with market data service
-        # Generate sample data for demonstration
+        # Generate deterministic sample data for demonstration
         days = (end_date - start_date).days
-        np.random.seed(42)  # For consistent sample data
-        return np.random.normal(0.0008, 0.015, days).tolist()  # Sample daily returns
+        
+        # Use deterministic daily returns based on date characteristics
+        base_return = 0.0008  # 0.08% daily (about 20% annual)
+        volatility = 0.015    # 1.5% daily volatility
+        
+        # Create deterministic series based on day number
+        returns = []
+        for i in range(days):
+            # Use sine wave pattern for realistic market-like returns
+            cycle_position = (i % 252) / 252.0  # Annual cycle
+            market_cycle = 0.0008 * (1 + 0.3 * np.sin(2 * np.pi * cycle_position))
+            
+            # Add deterministic "volatility" based on position in cycle
+            volatility_factor = 0.015 * (0.8 + 0.4 * abs(np.sin(4 * np.pi * cycle_position)))
+            daily_return = market_cycle + (volatility_factor * np.sin(i * 0.1))
+            
+            returns.append(daily_return)
+        
+        return returns
     
     async def _get_sector_allocation(self, portfolio_id: int, start_date: date, end_date: date) -> Dict[str, float]:
         """Get portfolio sector allocation."""

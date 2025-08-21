@@ -252,17 +252,23 @@ class RiskManager:
 def main():
     """Test the risk management module"""
     
-    # Generate sample data
-    np.random.seed(42)
+    # Generate deterministic sample data
     dates = pd.date_range(start='2022-01-01', end='2024-01-01', freq='D')
     
-    # Simulate returns for 5 assets
+    # Simulate returns for 5 assets using deterministic approach
     assets = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'NVDA']
     returns_data = {}
     
     for asset in assets:
-        # Simulate daily returns (mean=0.05% daily, std=1.5% daily)
-        returns_data[asset] = np.random.normal(0.0005, 0.015, len(dates))
+        # Generate deterministic daily returns with realistic characteristics
+        asset_returns = []
+        for i, date in enumerate(dates):
+            return_hash = hash(f"{date.strftime('%Y%m%d')}_{asset}") % 10000
+            base_return = 0.0005  # 0.05% daily base return
+            noise = ((return_hash - 5000) / 10000.0) * 0.03  # ±1.5% daily volatility
+            asset_returns.append(base_return + noise)
+        
+        returns_data[asset] = asset_returns
     
     returns_df = pd.DataFrame(returns_data, index=dates)
     

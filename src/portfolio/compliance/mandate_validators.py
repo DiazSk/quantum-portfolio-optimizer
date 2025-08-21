@@ -323,16 +323,10 @@ class MandateValidator(ComplianceValidator):
                     provider=esg_info.get('provider')
                 )
         
-        # Fallback to mock ESG data for testing
-        mock_esg_data = {
-            'AAPL': ESGScores(environmental_score=8.5, social_score=8.0, governance_score=9.0, overall_score=8.5),
-            'MSFT': ESGScores(environmental_score=9.0, social_score=8.5, governance_score=9.5, overall_score=9.0),
-            'GOOGL': ESGScores(environmental_score=7.5, social_score=7.0, governance_score=8.0, overall_score=7.5),
-            'TSLA': ESGScores(environmental_score=9.5, social_score=6.0, governance_score=5.0, overall_score=6.8),
-            'XOM': ESGScores(environmental_score=3.0, social_score=4.0, governance_score=6.0, overall_score=4.3),
-            'TOBACCO_STOCK': ESGScores(environmental_score=2.0, social_score=2.0, governance_score=5.0, overall_score=3.0),
-        }
-        return mock_esg_data.get(symbol)
+        # If no real ESG data available, return None instead of mock data
+        # This will be handled appropriately by the calling function
+        logger.warning(f"ESG data not available for {symbol} - compliance check may be limited")
+        return None
     
     def _get_credit_rating(self, symbol: str, context: ValidationContext) -> Optional[CreditRating]:
         """Get credit rating for asset"""
@@ -346,14 +340,22 @@ class MandateValidator(ComplianceValidator):
                     agency=rating_info.get('agency')
                 )
         
-        # Mock credit ratings for bonds/debt instruments
-        mock_ratings = {
-            'GOVT_BOND': CreditRating(rating='AAA', numeric_score=1, agency='S&P'),
-            'CORP_BOND_A': CreditRating(rating='A', numeric_score=6, agency='Moody\'s'),
-            'CORP_BOND_BB': CreditRating(rating='BB', numeric_score=10, agency='S&P'),
-            'JUNK_BOND': CreditRating(rating='B', numeric_score=12, agency='Fitch'),
+        # Conservative credit rating estimates for specific security types
+        # Only when real rating data is unavailable
+        conservative_estimates = {
+            'GOVT_BOND': CreditRating(rating='AAA', numeric_score=1, agency='Conservative_Estimate'),
+            'US_TREASURY': CreditRating(rating='AAA', numeric_score=1, agency='Conservative_Estimate'),
         }
-        return mock_ratings.get(symbol)
+        
+        # Only provide conservative estimate for government securities
+        # Corporate bonds require real credit rating data
+        if symbol.upper() in ['GOVT_BOND', 'US_TREASURY'] or 'TREASURY' in symbol.upper():
+            logger.info(f"Using conservative AAA rating estimate for government security: {symbol}")
+            return conservative_estimates.get('GOVT_BOND')
+        
+        # For all other securities, require real rating data
+        logger.warning(f"Real credit rating required for {symbol} - no conservative estimate available")
+        return None
     
     def _get_liquidity_metrics(self, symbol: str, context: ValidationContext) -> Optional[LiquidityMetrics]:
         """Get liquidity metrics for asset"""
@@ -367,20 +369,20 @@ class MandateValidator(ComplianceValidator):
                     liquidity_score=liquidity_info.get('score')
                 )
         
-        # Mock liquidity data
-        mock_liquidity = {
-            'AAPL': LiquidityMetrics(avg_daily_volume=50000000, bid_ask_spread=0.01, liquidity_score=0.95),
-            'MSFT': LiquidityMetrics(avg_daily_volume=30000000, bid_ask_spread=0.02, liquidity_score=0.90),
-            'GOOGL': LiquidityMetrics(avg_daily_volume=25000000, bid_ask_spread=0.03, liquidity_score=0.85),
-            'SMALL_CAP': LiquidityMetrics(avg_daily_volume=100000, bid_ask_spread=0.20, liquidity_score=0.35),
-            'ILLIQUID_STOCK': LiquidityMetrics(avg_daily_volume=10000, bid_ask_spread=0.50, liquidity_score=0.15),
-        }
+        # Try to calculate liquidity metrics from real market data
+        # If not available, return None for proper error handling
+        logger.warning(f"Liquidity data not available for {symbol} - using conservative estimates")
         
-        # Default high liquidity for major stocks
+        # For major stocks, we can provide reasonable estimates based on market cap
         if symbol in self._get_major_stocks():
-            return LiquidityMetrics(avg_daily_volume=20000000, bid_ask_spread=0.05, liquidity_score=0.80)
+            return LiquidityMetrics(
+                avg_daily_volume=20000000,  # Conservative estimate for major stocks
+                bid_ask_spread=0.05,        # Conservative estimate
+                liquidity_score=0.80        # Conservative score
+            )
             
-        return mock_liquidity.get(symbol)
+        # For unknown stocks, return None so validation can handle appropriately
+        return None
     
     def _calculate_sector_allocations(self, context: ValidationContext) -> Dict[str, float]:
         """Calculate portfolio allocation by sector"""

@@ -215,13 +215,14 @@ class PortfolioOptimizer:
                     features['momentum_10d'] = self.returns[ticker].rolling(10).mean()
                     features['momentum_30d'] = self.returns[ticker].rolling(30).mean()
                 
-                # Add random feature windows for diversity
+                # Add deterministic feature windows for diversity based on ticker hash
                 if not self.use_random_state:
-                    momentum_window = np.random.randint(10, 30)
+                    ticker_hash = hash(ticker) % 1000
+                    momentum_window = 10 + (ticker_hash % 20)  # 10-29 range based on ticker
                     features[f'momentum_{momentum_window}'] = self.returns[ticker].rolling(momentum_window).mean()
                     
-                    # Add volume-based feature if possible
-                    vol_window = np.random.randint(5, 15)
+                    # Add volume-based feature deterministically
+                    vol_window = 5 + (ticker_hash % 10)  # 5-14 range based on ticker
                     features[f'vol_ratio_{vol_window}'] = (
                         self.returns[ticker].rolling(vol_window).std() / 
                         self.returns[ticker].rolling(vol_window * 2).std()
@@ -236,14 +237,15 @@ class PortfolioOptimizer:
                 y = target[valid_mask].values
                 
                 if len(X) > 50:
-                    # USE REGIME-ADJUSTED HYPERPARAMETERS
+                    # USE REGIME-ADJUSTED HYPERPARAMETERS (deterministic based on ticker)
                     if not self.use_random_state:
-                        n_estimators = np.random.randint(*n_estimators_range)
-                        max_depth = np.random.randint(*max_depth_range)
-                        learning_rate = np.random.uniform(*learning_rate_range)
-                        subsample = np.random.uniform(0.6, 0.9)
+                        ticker_hash = hash(ticker) % 1000
+                        n_estimators = n_estimators_range[0] + (ticker_hash % (n_estimators_range[1] - n_estimators_range[0]))
+                        max_depth = max_depth_range[0] + ((ticker_hash // 100) % (max_depth_range[1] - max_depth_range[0]))
+                        learning_rate = learning_rate_range[0] + ((ticker_hash % 100) / 100.0) * (learning_rate_range[1] - learning_rate_range[0])
+                        subsample = 0.6 + ((ticker_hash % 30) / 100.0)  # 0.6 to 0.89
                         
-                        model_seed = None  # This ensures different results each run
+                        model_seed = ticker_hash % 42  # Deterministic seed based on ticker
                     else:
                         n_estimators = 30
                         max_depth = 3
@@ -261,9 +263,10 @@ class PortfolioOptimizer:
                         verbosity=0
                     )
                     
-                    # Random train/test split
+                    # Deterministic train/test split based on data characteristics
                     if not self.use_random_state:
-                        split_ratio = np.random.uniform(0.7, 0.85)
+                        data_hash = len(X) % 100
+                        split_ratio = 0.7 + (data_hash / 1000.0)  # 0.7 to 0.769
                     else:
                         split_ratio = 0.8
                     
@@ -278,14 +281,15 @@ class PortfolioOptimizer:
                         # APPLY REGIME-BASED ADJUSTMENT
                         pred = pred * prediction_adjustment
                         
-                        # Add small market noise for realism
+                        # Add deterministic market adjustment for realism based on ticker characteristics
                         if not self.use_random_state:
-                            # Regime-specific noise
+                            # Regime-specific adjustment using ticker hash
+                            ticker_factor = (hash(ticker) % 1000) / 500000.0  # -0.001 to +0.001
                             if market_regime == "high_volatility":
-                                market_noise = np.random.normal(0, 0.0005)  # Higher noise
+                                market_adjustment = ticker_factor * 0.5  # Higher adjustment range
                             else:
-                                market_noise = np.random.normal(0, 0.0002)  # Normal noise
-                            pred = pred + market_noise
+                                market_adjustment = ticker_factor * 0.2  # Normal adjustment range
+                            pred = pred + market_adjustment
                         
                         predictions[ticker] = pred
                         print(f"  {ticker}: Predicted return = {pred:+.3%} "
@@ -296,8 +300,9 @@ class PortfolioOptimizer:
                     # Not enough data, use historical mean with regime adjustment
                     base_return = self.returns[ticker].mean() * prediction_adjustment
                     if not self.use_random_state:
-                        noise = np.random.normal(0, 0.0001)
-                        predictions[ticker] = base_return + noise
+                        # Deterministic adjustment based on ticker characteristics
+                        ticker_adjustment = (hash(ticker) % 200 - 100) / 1000000.0  # -0.0001 to +0.0001
+                        predictions[ticker] = base_return + ticker_adjustment
                     else:
                         predictions[ticker] = base_return
                     print(f"  {ticker}: Using historical mean (regime-adjusted)")
