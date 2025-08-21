@@ -852,13 +852,14 @@ class UnifiedDashboard:
             st.metric("News Sentiment", "72%", delta="Positive")
             st.metric("Social Sentiment", "68%", delta="Optimistic")
     
-    def _render_sales_pipeline(self):
+    def _render_sales_pipeline(self, sales_data: Dict = None):
         """Render sales pipeline dashboard"""
         st.title("💰 Sales Pipeline")
         st.markdown("---")
         
         # Get real sales data
-        sales_data = self._get_real_sales_data()
+        if sales_data is None:
+            sales_data = self._get_real_sales_data()
         
         # Sales metrics
         col1, col2, col3, col4 = st.columns(4)
@@ -1831,6 +1832,37 @@ class UnifiedDashboard:
         
         st.plotly_chart(fig, use_container_width=True)
     
+    def _get_real_sales_funnel_data(self) -> Dict:
+        """Get real sales funnel data from CRM"""
+        try:
+            # Simulate real CRM data that would come from actual sales system
+            base_leads = 1250
+            current_hour = datetime.now().hour
+            daily_variation = int(current_hour * 2.5 + np.random.randint(-50, 100))
+            
+            leads = base_leads + daily_variation
+            qualified = int(leads * 0.35)  # 35% qualification rate
+            proposals = int(qualified * 0.4)  # 40% proposal rate
+            closed = int(proposals * 0.25)  # 25% close rate
+            
+            return {
+                'leads': leads,
+                'leads_change': np.random.randint(50, 200),
+                'qualified': qualified,
+                'qualified_change': np.random.randint(20, 80),
+                'proposals': proposals,
+                'proposals_change': np.random.randint(10, 40),
+                'closed': closed,
+                'closed_change': np.random.randint(5, 20)
+            }
+        except:
+            return {
+                'leads': 1250, 'leads_change': 125,
+                'qualified': 438, 'qualified_change': 44,
+                'proposals': 175, 'proposals_change': 25,
+                'closed': 44, 'closed_change': 8
+            }
+    
     def _render_revenue_forecast(self, sales_data: Dict):
         """Render revenue forecast with real sales data"""
         st.subheader("📈 Revenue Forecast")
@@ -1869,6 +1901,40 @@ class UnifiedDashboard:
         )
         
         st.plotly_chart(fig, use_container_width=True)
+    
+    def _get_revenue_forecast_data(self) -> Dict:
+        """Get revenue forecast data"""
+        try:
+            # Generate realistic revenue data
+            base_arr = 5200000  # $5.2M ARR
+            monthly_base = base_arr / 12
+            
+            # Generate monthly revenue with growth trend
+            monthly_revenue = []
+            for i in range(12):
+                growth_factor = 1 + (i * 0.02)  # 2% monthly growth
+                monthly = monthly_base * growth_factor * (1 + np.random.uniform(-0.1, 0.15))
+                monthly_revenue.append(monthly)
+            
+            return {
+                'q4_forecast': sum(monthly_revenue[9:12]),
+                'q4_growth': 0.18,
+                'arr': base_arr * 1.2,  # 20% growth
+                'arr_growth': 0.2,
+                'pipeline': 2800000,
+                'pipeline_growth': 0.15,
+                'close_rate': 28.5,
+                'close_rate_change': 2.3,
+                'monthly_revenue': monthly_revenue
+            }
+        except:
+            return {
+                'q4_forecast': 1500000, 'q4_growth': 0.18,
+                'arr': 6240000, 'arr_growth': 0.2,
+                'pipeline': 2800000, 'pipeline_growth': 0.15,
+                'close_rate': 28.5, 'close_rate_change': 2.3,
+                'monthly_revenue': [400000 + i*10000 for i in range(12)]
+            }
     
     def _render_statistical_analysis(self, analytics_data: Dict):
         """Render statistical analysis with real data"""
@@ -4376,37 +4442,6 @@ def main():
         
         return events
 
-    def _get_real_sales_funnel_data(self) -> Dict:
-        """Get real sales funnel data from CRM"""
-        try:
-            # Simulate real CRM data that would come from actual sales system
-            base_leads = 1250
-            current_hour = datetime.now().hour
-            daily_variation = int(current_hour * 2.5 + np.random.randint(-50, 100))
-            
-            leads = base_leads + daily_variation
-            qualified = int(leads * 0.35)  # 35% qualification rate
-            proposals = int(qualified * 0.4)  # 40% proposal rate
-            closed = int(proposals * 0.25)  # 25% close rate
-            
-            return {
-                'leads': leads,
-                'leads_change': np.random.randint(50, 200),
-                'qualified': qualified,
-                'qualified_change': np.random.randint(20, 80),
-                'proposals': proposals,
-                'proposals_change': np.random.randint(10, 40),
-                'closed': closed,
-                'closed_change': np.random.randint(5, 20)
-            }
-        except:
-            return {
-                'leads': 1250, 'leads_change': 125,
-                'qualified': 438, 'qualified_change': 44,
-                'proposals': 175, 'proposals_change': 25,
-                'closed': 44, 'closed_change': 8
-            }
-
     def _get_portfolio_optimizer_safe(self, tickers):
         """Safely initialize portfolio optimizer with error handling"""
         try:
@@ -4440,40 +4475,6 @@ def main():
         except Exception as e:
             logger.error(f"Error initializing risk manager: {e}")
             return None
-
-    def _get_revenue_forecast_data(self) -> Dict:
-        """Get revenue forecast data"""
-        try:
-            # Generate realistic revenue data
-            base_arr = 5200000  # $5.2M ARR
-            monthly_base = base_arr / 12
-            
-            # Generate monthly revenue with growth trend
-            monthly_revenue = []
-            for i in range(12):
-                growth_factor = 1 + (i * 0.02)  # 2% monthly growth
-                monthly = monthly_base * growth_factor * (1 + np.random.uniform(-0.1, 0.15))
-                monthly_revenue.append(monthly)
-            
-            return {
-                'q4_forecast': sum(monthly_revenue[9:12]),
-                'q4_growth': 0.18,
-                'arr': base_arr * 1.2,  # 20% growth
-                'arr_growth': 0.2,
-                'pipeline': 2800000,
-                'pipeline_growth': 0.15,
-                'close_rate': 28.5,
-                'close_rate_change': 2.3,
-                'monthly_revenue': monthly_revenue
-            }
-        except:
-            return {
-                'q4_forecast': 1500000, 'q4_growth': 0.18,
-                'arr': 6240000, 'arr_growth': 0.2,
-                'pipeline': 2800000, 'pipeline_growth': 0.15,
-                'close_rate': 28.5, 'close_rate_change': 2.3,
-                'monthly_revenue': [400000 + i*10000 for i in range(12)]
-            }
 
 if __name__ == "__main__":
     main()
