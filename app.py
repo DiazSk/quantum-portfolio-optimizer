@@ -62,6 +62,19 @@ try:
     from src.dashboard.unified_dashboard import UnifiedDashboard
     dashboard_available = True
     
+    # Add top navigation toggles
+    st.markdown("---")
+    
+    # Main navigation - Three primary modes
+    nav_option = st.radio(
+        "🎯 **Navigation Mode**",
+        ["🚀 Unified Dashboard", "📊 Analytics Hub", "💼 Portfolio Manager"],
+        horizontal=True,
+        help="Choose your preferred interface for accessing platform features"
+    )
+    
+    st.markdown("---")
+    
     # Professional header with live metrics for recruiters
     if demo_available:
         achievements = PROFESSIONAL_DEMO_DATA["platform_achievements"]
@@ -101,19 +114,6 @@ try:
             </div>
         </div>
         """, unsafe_allow_html=True)
-    
-    # Add top navigation toggles
-    st.markdown("---")
-    
-    # Main navigation - Three primary modes
-    nav_option = st.radio(
-        "🎯 **Navigation Mode**",
-        ["🚀 Unified Dashboard", "📊 Analytics Hub", "💼 Portfolio Manager"],
-        horizontal=True,
-        help="Choose your preferred interface for accessing platform features"
-    )
-    
-    st.markdown("---")
     
     # Add professional notice for recruiters with demo scenarios
     if demo_available:
