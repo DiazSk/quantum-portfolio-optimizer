@@ -51,6 +51,23 @@ sys.path.insert(0, project_root)
 # Load environment variables
 load_dotenv()
 
+def get_api_key(key_name: str) -> str:
+    """Get API key from environment or Streamlit secrets"""
+    # Try environment first (local development)
+    value = os.getenv(key_name)
+    if value:
+        return value
+    
+    # Try Streamlit secrets (cloud deployment)
+    try:
+        import streamlit as st
+        if hasattr(st, 'secrets') and 'api_keys' in st.secrets:
+            return st.secrets.api_keys.get(key_name, "")
+    except:
+        pass
+    
+    return ""
+
 # Import real API collectors and systems
 try:
     from src.data.alternative_data_collector import AlternativeDataCollector
@@ -156,12 +173,33 @@ class UnifiedDashboard:
         
         missing_apis = []
         for api in required_apis:
-            if not os.getenv(api):
+            if not get_api_key(api):
                 missing_apis.append(api)
         
         if missing_apis:
             st.error(f"❌ Missing API keys: {', '.join(missing_apis)}")
-            st.error("Please configure all required APIs in the .env file")
+            st.error("🔧 **Streamlit Cloud Configuration Required:**")
+            st.info("""
+            **To fix this deployment issue:**
+            
+            1. **Go to your Streamlit Cloud dashboard**
+            2. **Click on your app → Settings → Secrets**
+            3. **Add these API keys:**
+            ```
+            ALPHA_VANTAGE_API_KEY = "your_actual_key"
+            NEWS_API_KEY = "your_actual_key"
+            FMP_API_KEY = "your_actual_key"
+            REDDIT_CLIENT_ID = "your_actual_key"
+            REDDIT_CLIENT_SECRET = "your_actual_key"
+            ```
+            4. **Save and redeploy**
+            
+            **Get free API keys from:**
+            - Alpha Vantage: https://www.alphavantage.co/support/#api-key
+            - News API: https://newsapi.org/register
+            - Financial Modeling Prep: https://financialmodelingprep.com/developer/docs
+            - Reddit: https://www.reddit.com/prefs/apps
+            """)
             st.stop()
     
     def _initialize_session_state(self):

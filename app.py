@@ -29,6 +29,13 @@ st.set_page_config(
 project_root = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, project_root)
 
+# Load environment variables for local development
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not available in cloud deployment
+
 try:
     # Import professional demo data
     from src.demo.professional_demo_data import PROFESSIONAL_DEMO_DATA
