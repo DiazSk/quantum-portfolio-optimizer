@@ -6,7 +6,7 @@ import pytest
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock, MagicMock, patch
 import os
 import sys
 
@@ -37,20 +37,20 @@ def sample_prices():
 
 @pytest.fixture(scope="function")
 def mock_yfinance():
-    """Mock yfinance for testing"""
-    with pytest.mock.patch('yfinance.Ticker') as mock:
-        ticker_mock = MagicMock()
-        ticker_mock.history.return_value = pd.DataFrame({
-            'Close': [100, 102, 101, 103, 105],
-            'Volume': [1000000, 1100000, 900000, 1200000, 1050000]
-        })
-        ticker_mock.info = {
-            'shortName': 'Test Company',
-            'sector': 'Technology',
-            'marketCap': 1000000000
-        }
-        mock.return_value = ticker_mock
-        yield mock
+    """Mock yfinance for testing using unittest.mock.patch"""
+    ticker_mock = MagicMock()
+    ticker_mock.history.return_value = pd.DataFrame({
+        'Close': [100, 102, 101, 103, 105],
+        'Volume': [1000000, 1100000, 900000, 1200000, 1050000]
+    })
+    ticker_mock.info = {
+        'shortName': 'Test Company',
+        'sector': 'Technology',
+        'marketCap': 1000000000
+    }
+    # Patch yfinance.Ticker to always return our ticker_mock during the test
+    with patch('yfinance.Ticker', return_value=ticker_mock) as mock_cls:
+        yield mock_cls
 
 
 @pytest.fixture(scope="function")
