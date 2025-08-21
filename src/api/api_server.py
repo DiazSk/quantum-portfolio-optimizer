@@ -24,6 +24,14 @@ except ImportError:
     print("⚠️  Authentication module not available, running without auth")
     AUTHENTICATION_ENABLED = False
 
+# Import alternative assets API (Story 3.3/3.4)
+try:
+    from .alternative_assets import router as alternative_assets_router
+    ALTERNATIVE_ASSETS_ENABLED = True
+except ImportError:
+    print("⚠️  Alternative assets module not available")
+    ALTERNATIVE_ASSETS_ENABLED = False
+
 # Import compliance system
 from ..portfolio.compliance_engine import compliance_api, ProductionComplianceEngine
 from ..models.compliance import ComplianceValidationRequest, ComplianceRuleCreate
@@ -56,6 +64,11 @@ if AUTHENTICATION_ENABLED:
     app.include_router(auth_router)
     app.include_router(admin_router)
     print("✅ Authentication system enabled")
+
+# Add alternative assets API routes (Story 3.3/3.4)
+if ALTERNATIVE_ASSETS_ENABLED:
+    app.include_router(alternative_assets_router)
+    print("✅ Alternative assets API enabled")
 
 # Enable CORS for web frontend
 app.add_middleware(
