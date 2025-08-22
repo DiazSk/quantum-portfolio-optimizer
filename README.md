@@ -250,8 +250,8 @@ docker run -p 8501:8501 -e API_KEYS_CONFIGURED=true quantum-portfolio-prod
 ### **👨‍💻 Developer Contact**
 - **Portfolio Demo:** [Live Application](https://share.streamlit.io/diazsk/quantum-portfolio-optimizer/main/app.py)
 - **GitHub:** [Source Code & Documentation](https://github.com/DiazSk/quantum-portfolio-optimizer)
-- **LinkedIn:** [Professional Profile](https://linkedin.com/in/[your-profile])
-- **Email:** [your-email@example.com]
+- **LinkedIn:** [Professional Profile](https://linkedin.com/in/zaidshaikhscientist)
+- **Email:** [zaid07sk@gmail.com]
 
 ---
 
