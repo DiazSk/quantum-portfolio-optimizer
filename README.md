@@ -4,7 +4,7 @@
 **Enterprise-Grade Portfolio Management Platform | Live Demo Available**
 
 [![Project Status](https://img.shields.io/badge/Status-100%25%20Complete-brightgreen?style=for-the-badge)](#)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Deploy%20Ready-FF4B4B?style=for-the-badge)]((https://quantum-portfolio-optimizer.streamlit.app/))
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Deploy%20Ready-FF4B4B?style=for-the-badge)](https://share.streamlit.io/diazsk/quantum-portfolio-optimizer/main/app.py)
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg?style=for-the-badge)](https://www.python.org/downloads/)
 [![Enterprise Ready](https://img.shields.io/badge/Enterprise-Ready-gold?style=for-the-badge)](#)
 
@@ -268,7 +268,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ### 🎯 **ENTERPRISE-READY PORTFOLIO PLATFORM**
 ### **✅ 100% COMPLETE - READY FOR DEPLOYMENT**
 
-[![🚀 Deploy Now](https://img.shields.io/badge/🚀%20Deploy%20Now-Streamlit%20Cloud-success?style=for-the-badge)]([https://share.streamlit.io/diazsk/quantum-portfolio-optimizer/main/run_portfolio_system.py](https://quantum-portfolio-optimizer.streamlit.app/))
+[![🚀 Deploy Now](https://img.shields.io/badge/🚀%20Deploy%20Now-Streamlit%20Cloud-success?style=for-the-badge)](https://share.streamlit.io/diazsk/quantum-portfolio-optimizer/main/app.py)
 [![💼 Hire This Developer](https://img.shields.io/badge/💼%20Ready%20for%20Interviews-Contact%20Now-blue?style=for-the-badge)](mailto:zaid07sk@gmail.com)
 
 ### **Perfect for Fall 2025 Data Analyst & FinTech Positions**
